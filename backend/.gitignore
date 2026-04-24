@@ -1,0 +1,13 @@
+# Ambientes Virtuais
+venv/
+env/
+
+# Base de Dados local (não queremos partilhar os dados de teste)
+db.sqlite3
+
+# Ficheiros temporários do Python
+__pycache__/
+*.pyc
+
+# Variáveis de ambiente (passwords futuras)
+.env
