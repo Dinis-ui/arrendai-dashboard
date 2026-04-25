@@ -1,3 +1,32 @@
 from django.db import models
 
 # Create your models here.
+from django.db import models
+from django.conf import settings
+from properties.models import Property 
+
+class Application(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'Pendente'),
+        ('approved', 'Aprovada'),
+        ('rejected', 'Rejeitada'),
+    )
+    property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='applications')
+    tenant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='applications')
+    message = models.TextField(blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Candidatura: {self.tenant.username} -> {self.property.title}"
+
+class Tenancy(models.Model):
+    property = models.ForeignKey(Property, on_delete=models.PROTECT, related_name='active_tenancies')
+    tenant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='my_tenancies')
+    start_date = models.DateField()
+    end_date = models.DateField()
+    monthly_rent = models.DecimalField(max_digits=8, decimal_places=2)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"Contrato: {self.property.title} ({self.tenant.username})"

@@ -22,5 +22,8 @@ class Property(models.Model):
     is_available = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        verbose_name_plural = "Properties"
+
     def __str__(self):
         return f"{self.title} - {self.city} ({self.typology})"
