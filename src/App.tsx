@@ -1,5 +1,5 @@
-import PortalInquilino from './components/PortalInquilino';
+import Login from './components/Login';
 
 export default function App() {
-  return <PortalInquilino />;
+  return <Login />;
 }
