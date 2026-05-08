@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom'; // Importacao adicionada para permitir a navegacao
 import {
   Search,
   MapPin,
@@ -133,7 +134,11 @@ function PropertyCard({ listing, onApply }: { listing: typeof listings[0]; onApp
   const [saved, setSaved] = useState(false);
 
   return (
-    <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 group flex flex-col">
+    
+    <Link 
+      to="/imovel" 
+      className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 group flex flex-col cursor-pointer block"
+    >
       <div className="relative overflow-hidden h-48">
         <img
           src={listing.photo}
@@ -146,7 +151,10 @@ function PropertyCard({ listing, onApply }: { listing: typeof listings[0]; onApp
           </span>
         </div>
         <button
-          onClick={() => setSaved(!saved)}
+          onClick={(e) => {
+            e.preventDefault(); // Impede que o clique no botao de favorito ative o link da pagina
+            setSaved(!saved);
+          }}
           className="absolute top-3 right-3 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors"
         >
           <Heart size={15} className={saved ? 'fill-rose-500 text-rose-500' : 'text-slate-400'} />
@@ -184,14 +192,17 @@ function PropertyCard({ listing, onApply }: { listing: typeof listings[0]; onApp
             <span className="text-slate-400 text-sm">/mês</span>
           </div>
           <button
-            onClick={() => onApply(listing.id)}
+            onClick={(e) => {
+              e.preventDefault(); // Impede que o clique no botao de candidatar ative o link geral
+              onApply(listing.id);
+            }}
             className="flex items-center gap-1.5 bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm"
           >
             Candidatar-me <ArrowUpRight size={14} />
           </button>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 

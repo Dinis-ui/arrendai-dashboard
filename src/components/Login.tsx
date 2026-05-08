@@ -1,18 +1,20 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom'; 
 
 export default function Login() {
-  // Guardamos o que o utilizador escreve nestas variáveis
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [mensagem, setMensagem] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  // Esta função corre quando clicamos no botão "Entrar"
+  const navigate = useNavigate(); 
+
   const fazerLogin = async (e: React.FormEvent) => {
-    e.preventDefault(); // Evita que a página faça refresh
-    setMensagem('A verificar...');
+    e.preventDefault();
+    setLoading(true);
+    setMensagem('');
 
     try {
-      // O React bate à porta do servidor do Dinis
       const resposta = await fetch('http://127.0.0.1:8000/api/token/', {
         method: 'POST',
         headers: {
@@ -22,61 +24,112 @@ export default function Login() {
       });
 
       if (resposta.ok) {
-        // Se a porta abrir, recebemos os tokens!
         const dados = await resposta.json();
-        
-        // Guardamos o Token no cofre do navegador (localStorage)
         localStorage.setItem('accessToken', dados.access);
         localStorage.setItem('refreshToken', dados.refresh);
+        setMensagem('Entraste com sucesso!');
         
-        setMensagem('✅ Login com sucesso! Chave guardada.');
+        
+        navigate('/portal'); 
+        
       } else {
-        setMensagem('❌ Username ou password errados!');
+        setMensagem('Username ou password errados.');
       }
-    } catch (erro) {
-      setMensagem('⚠️ Erro de ligação ao servidor. O motor está ligado?');
+    } catch {
+      setMensagem('Erro de ligacao ao servidor.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex h-screen items-center justify-center bg-gray-100">
-      <form onSubmit={fazerLogin} className="w-96 rounded-lg bg-white p-8 shadow-md">
-        <h2 className="mb-6 text-center text-2xl font-bold text-gray-800">Login ArrendAI</h2>
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 font-sans text-slate-900">
+      
+      <div className="w-full max-w-md px-6">
         
-        <div className="mb-4">
-          <label className="mb-2 block text-sm font-bold text-gray-700">Username</label>
-          <input 
-            type="text" 
-            className="w-full rounded border px-3 py-2 focus:border-blue-500 focus:outline-none"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-          />
+        <div className="mb-8 flex flex-col items-center justify-center gap-3">
+          <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-sky-500 text-3xl font-bold text-white shadow-lg shadow-sky-500/30">
+            A
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            ArrendAI
+          </h1>
+          <p className="text-sm text-slate-500">
+            Bem-vindo de volta! Insere os teus dados.
+          </p>
         </div>
 
-        <div className="mb-6">
-          <label className="mb-2 block text-sm font-bold text-gray-700">Password</label>
-          <input 
-            type="password" 
-            className="w-full rounded border px-3 py-2 focus:border-blue-500 focus:outline-none"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+        
+        <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm">
+          <form onSubmit={fazerLogin} className="space-y-5">
+            
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                Username
+              </label>
+              <input 
+                type="text" 
+                className="w-full rounded-xl border border-gray-200 bg-slate-50 px-4 py-3 text-sm transition-colors focus:border-sky-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                placeholder="O teu nome de utilizador"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                Password
+              </label>
+              <input 
+                type="password" 
+                className="w-full rounded-xl border border-gray-200 bg-slate-50 px-4 py-3 text-sm transition-colors focus:border-sky-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="flex items-center justify-between pb-2">
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                <input type="checkbox" className="rounded border-gray-300 text-sky-500 focus:ring-sky-500" />
+                Lembrar de mim
+              </label>
+              <a href="#" className="text-sm font-medium text-sky-500 hover:text-sky-600">
+                Esqueceu a password?
+              </a>
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="w-full rounded-xl bg-sky-500 py-3 font-semibold text-white shadow-sm transition-all hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:opacity-70"
+            >
+              {loading ? 'A verificar...' : 'Entrar na conta'}
+            </button>
+
+            
+            {mensagem && (
+              <div className={`mt-4 rounded-lg p-3 text-center text-sm font-medium ${
+                mensagem.includes('sucesso') ? 'bg-green-50 text-green-700 border border-green-200' : 
+                'bg-red-50 text-red-700 border border-red-200'
+              }`}>
+                {mensagem}
+              </div>
+            )}
+          </form>
         </div>
 
-        <button 
-          type="submit" 
-          className="w-full rounded bg-blue-600 py-2 font-bold text-white hover:bg-blue-700 transition"
-        >
-          Entrar
-        </button>
+        
+        <p className="mt-8 text-center text-sm text-slate-500">
+          Ainda nao tens conta?{' '}
+          <a href="#" className="font-semibold text-sky-500 hover:text-sky-600">
+            Registar como inquilino
+          </a>
+        </p>
+      </div>
 
-        {/* Mostra mensagens de erro ou sucesso */}
-        {mensagem && (
-          <p className="mt-4 text-center font-semibold text-gray-700">{mensagem}</p>
-        )}
-      </form>
     </div>
   );
 }
