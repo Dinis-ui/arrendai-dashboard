@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom'; // Importacao adicionada para permitir a navegacao
+import { Link, useNavigate } from 'react-router-dom'; // Importacao adicionada para permitir a navegacao
 import {
   Search,
   MapPin,
@@ -207,6 +207,7 @@ function PropertyCard({ listing, onApply }: { listing: typeof listings[0]; onApp
 }
 
 export default function PortalInquilino() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('Pesquisar');
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<Filters>({
@@ -263,12 +264,15 @@ export default function PortalInquilino() {
         </nav>
 
         <div className="p-4 border-t border-slate-800">
-          <div className="flex items-center gap-3 px-2">
+          <div 
+            onClick={() => navigate('/perfil')}
+            className="flex items-center gap-3 px-2 py-2 cursor-pointer hover:bg-slate-800 rounded-lg transition-colors"
+          >
             <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold">
               MF
             </div>
             <div>
-              <p className="text-sm font-medium">Maria Ferreira</p>
+              <p className="text-sm font-medium text-white">Maria Ferreira</p>
               <p className="text-xs text-slate-400">Inquilina</p>
             </div>
           </div>

@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './components/Login';
 import PortalInquilino from './components/PortalInquilino';
 import DetalhesImovel from './components/DetalhesImovel';
+import Perfil from './components/Perfil';
 
 export default function App() {
   return (
@@ -11,6 +12,7 @@ export default function App() {
         <Route path="/portal" element={<PortalInquilino />} />
         <Route path="/imovel/:id" element={<DetalhesImovel />} />
         <Route path="/" element={<Navigate to="/login" />} />
+        <Route path="/perfil" element={<Perfil />} />
       </Routes>
     </BrowserRouter>
   );
