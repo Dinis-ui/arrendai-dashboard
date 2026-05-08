@@ -136,7 +136,7 @@ function PropertyCard({ listing, onApply }: { listing: typeof listings[0]; onApp
   return (
     
     <Link 
-      to="/imovel" 
+      to={`/imovel/${listing.id}`}
       className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 group flex flex-col cursor-pointer block"
     >
       <div className="relative overflow-hidden h-48">

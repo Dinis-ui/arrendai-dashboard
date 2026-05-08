@@ -9,7 +9,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/portal" element={<PortalInquilino />} />
-        <Route path="/imovel" element={<DetalhesImovel />} />
+        <Route path="/imovel/:id" element={<DetalhesImovel />} />
         <Route path="/" element={<Navigate to="/login" />} />
       </Routes>
     </BrowserRouter>
