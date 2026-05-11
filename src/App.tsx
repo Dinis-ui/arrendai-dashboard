@@ -5,6 +5,7 @@ import DetalhesImovel from './components/DetalhesImovel';
 import Perfil from './components/Perfil';
 import Registo from './components/Registo';
 import EsqueceuPassword from './components/EsqueceuPassword';
+import Mensagens from './components/Mensagens';
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="/imovel/:id" element={<DetalhesImovel />} />
         <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/perfil" element={<Perfil />} />
+        <Route path="/mensagens" element={<Mensagens />} />
       </Routes>
     </BrowserRouter>
   );

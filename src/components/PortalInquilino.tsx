@@ -12,6 +12,7 @@ import {
   Heart,
   ArrowUpRight,
   User,
+  MessageSquare,
 } from 'lucide-react';
 
 const menuItems = [
@@ -261,6 +262,13 @@ export default function PortalInquilino() {
               <span className="font-medium text-sm">{item.name}</span>
             </button>
           ))}
+          <Link 
+            to="/mensagens" 
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-slate-400 hover:bg-slate-800 hover:text-white mt-1"
+          >
+            <MessageSquare size={20} />
+            <span className="font-medium text-sm">Mensagens</span>
+          </Link>
         </nav>
 
         <div className="p-4 border-t border-slate-800">
