@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; 
+import { Link, useNavigate } from 'react-router-dom'; 
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -124,9 +124,9 @@ export default function Login() {
         
         <p className="mt-8 text-center text-sm text-slate-500">
           Ainda nao tens conta?{' '}
-          <a href="#" className="font-semibold text-sky-500 hover:text-sky-600">
+          <Link to="/registo" className="font-semibold text-sky-500 hover:text-sky-600">
             Registar como inquilino
-          </a>
+          </Link>
         </p>
       </div>
 

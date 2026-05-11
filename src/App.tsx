@@ -3,12 +3,14 @@ import Login from './components/Login';
 import PortalInquilino from './components/PortalInquilino';
 import DetalhesImovel from './components/DetalhesImovel';
 import Perfil from './components/Perfil';
+import Registo from './components/Registo';
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/registo" element={<Registo />} />
         <Route path="/portal" element={<PortalInquilino />} />
         <Route path="/imovel/:id" element={<DetalhesImovel />} />
         <Route path="/" element={<Navigate to="/login" />} />
