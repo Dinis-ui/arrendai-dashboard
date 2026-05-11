@@ -4,6 +4,7 @@ import PortalInquilino from './components/PortalInquilino';
 import DetalhesImovel from './components/DetalhesImovel';
 import Perfil from './components/Perfil';
 import Registo from './components/Registo';
+import EsqueceuPassword from './components/EsqueceuPassword';
 
 export default function App() {
   return (
@@ -11,6 +12,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/registo" element={<Registo />} />
+        <Route path="/recuperar-password" element={<EsqueceuPassword />} />
         <Route path="/portal" element={<PortalInquilino />} />
         <Route path="/imovel/:id" element={<DetalhesImovel />} />
         <Route path="/" element={<Navigate to="/login" />} />

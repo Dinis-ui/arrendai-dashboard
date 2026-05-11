@@ -96,9 +96,9 @@ export default function Login() {
                 <input type="checkbox" className="rounded border-gray-300 text-sky-500 focus:ring-sky-500" />
                 Lembrar de mim
               </label>
-              <a href="#" className="text-sm font-medium text-sky-500 hover:text-sky-600">
+              <Link to="/recuperar-password" className="text-sm font-medium text-sky-500 hover:text-sky-600">
                 Esqueceu a password?
-              </a>
+              </Link>
             </div>
 
             <button 
