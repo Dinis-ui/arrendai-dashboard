@@ -14,24 +14,25 @@ export default function Login() {
     setLoading(true);
     setMensagem('');
 
+    // --- SIMULAÇÃO DE LOGIN PARA TESTES NO FRONTEND ---
+    setTimeout(() => {
+      setMensagem('Entraste com sucesso!');
+      navigate('/portal');
+    }, 1000);
+
+    /* --- CÓDIGO REAL DA API (Desativado temporariamente) ---
     try {
       const resposta = await fetch('http://127.0.0.1:8000/api/token/', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
-
       if (resposta.ok) {
         const dados = await resposta.json();
         localStorage.setItem('accessToken', dados.access);
         localStorage.setItem('refreshToken', dados.refresh);
         setMensagem('Entraste com sucesso!');
-        
-        
         navigate('/portal'); 
-        
       } else {
         setMensagem('Username ou password errados.');
       }
@@ -40,8 +41,8 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
+    */
   };
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 font-sans text-slate-900">
       

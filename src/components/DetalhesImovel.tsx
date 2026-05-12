@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { MessageSquare, X, Send } from 'lucide-react';
+import { MessageSquare, X, Send, UploadCloud, CheckCircle, FileText } from 'lucide-react';
 
 const todosImoveis = [
   {
@@ -107,6 +107,20 @@ export default function DetalhesImovel() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mensagem, setMensagem] = useState('');
   const [enviado, setEnviado] = useState(false);
+
+  const [isCandidaturaOpen, setIsCandidaturaOpen] = useState(false);
+  const [candidaturaEnviada, setCandidaturaEnviada] = useState(false);
+
+  const submeterCandidatura = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Simula o envio para o backend
+    setCandidaturaEnviada(true);
+    setTimeout(() => {
+      setIsCandidaturaOpen(false);
+      setCandidaturaEnviada(false);
+      navigate('/portal'); // Volta ao portal para ver o estado "Em análise"
+    }, 3500);
+  };
 
   const enviarMensagem = (e: React.FormEvent) => {
     e.preventDefault();
@@ -233,7 +247,10 @@ export default function DetalhesImovel() {
               <p className="text-slate-500 text-sm font-medium mb-1">Renda Mensal</p>
               <p className="text-3xl font-bold text-slate-900 mb-6">{imovel.price}€</p>
               
-              <button className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-4 rounded-xl shadow-md transition-all hover:shadow-lg hover:-translate-y-0.5 mb-4 text-lg">
+              <button 
+                onClick={() => setIsCandidaturaOpen(true)}
+                className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-4 rounded-xl shadow-md transition-all hover:shadow-lg hover:-translate-y-0.5 mb-3 text-lg"
+              >
                 Candidatar-me a esta casa
               </button>
 
@@ -299,6 +316,84 @@ export default function DetalhesImovel() {
                   <button type="submit" className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2">
                     Enviar Mensagem <Send size={16} />
                   </button>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      {isCandidaturaOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="bg-slate-50 border-b border-slate-200 p-5 flex justify-between items-center">
+              <div>
+                <h3 className="font-bold text-slate-900 text-lg">Candidatura Oficial</h3>
+                <p className="text-sm text-slate-500">{imovel.title}</p>
+              </div>
+              <button onClick={() => setIsCandidaturaOpen(false)} className="text-slate-400 hover:text-slate-600 p-1">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              {candidaturaEnviada ? (
+                <div className="text-center py-10">
+                  <div className="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-5">
+                    <CheckCircle size={40} />
+                  </div>
+                  <h4 className="text-2xl font-bold text-slate-900 mb-2">Candidatura Submetida!</h4>
+                  <p className="text-slate-500 leading-relaxed max-w-md mx-auto">
+                    O senhorio <b>{imovel.senhorio}</b> vai analisar o teu perfil. Se for aceite, o sistema irá gerar automaticamente o teu contrato de arrendamento!
+                  </p>
+                </div>
+              ) : (
+                <form onSubmit={submeterCandidatura} className="space-y-6">
+                  
+                  {/* Mensagem */}
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">1. Mensagem de Apresentação</label>
+                    <p className="text-xs text-slate-500 mb-2">Explica porque és o inquilino ideal para esta casa.</p>
+                    <textarea 
+                      required
+                      placeholder="Ex: Olá, chamo-me Maria, trabalho como engenheira de software e procuro uma casa tranquila..."
+                      className="w-full h-28 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm focus:border-sky-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 resize-none"
+                    ></textarea>
+                  </div>
+
+                  {/* Documentos */}
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">2. Documentos Comprovativos</label>
+                    <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:bg-slate-50 hover:border-sky-300 transition-colors cursor-pointer">
+                      <UploadCloud size={28} className="mx-auto text-sky-500 mb-2" />
+                      <p className="text-sm font-medium text-slate-700">Clica para enviar ficheiros</p>
+                      <p className="text-xs text-slate-400 mt-1">PDF, JPG ou PNG (Máx 10MB)</p>
+                    </div>
+                    
+                    {/* Lista visual de ficheiros anexados  */}
+                    <div className="mt-3 space-y-2">
+                      <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                        <FileText size={16} className="text-slate-400" />
+                        <span className="text-sm text-slate-600 flex-1">IRS_2023.pdf</span>
+                        <span className="text-xs font-bold text-green-500">Anexado</span>
+                      </div>
+                      <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                        <FileText size={16} className="text-slate-400" />
+                        <span className="text-sm text-slate-600 flex-1">Recibos_Vencimento.pdf</span>
+                        <span className="text-xs font-bold text-green-500">Anexado</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Submit */}
+                  <div className="pt-4 border-t border-slate-100">
+                    <button type="submit" className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-4 rounded-xl transition-all shadow-md text-lg">
+                      Confirmar e Enviar Candidatura
+                    </button>
+                    <p className="text-center text-xs text-slate-400 mt-3 flex items-center justify-center gap-1">
+                       Os teus documentos estão seguros e encriptados.
+                    </p>
+                  </div>
+
                 </form>
               )}
             </div>

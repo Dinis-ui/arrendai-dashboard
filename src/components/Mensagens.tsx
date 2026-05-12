@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, ArrowLeft, Send, Image as ImageIcon } from 'lucide-react';
 
-// Dados simulados para mostrar a interface
+// Dados de simulação
 const conversasBase = [
   {
     id: 1,
@@ -44,7 +44,7 @@ export default function Mensagens() {
 
     const newMessage = { sender: 'me', text: inputText, time: 'Agora' };
     
-    // Atualiza a conversa ativa com a nova mensagem
+    // Atualiza a conversa 
     const updatedChat = {
       ...activeChat,
       lastMessage: inputText,
