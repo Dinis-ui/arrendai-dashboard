@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { MessageSquare, X, Send } from 'lucide-react';
 
-// Base de dados simulada com os 6 imoveis do portal
 const todosImoveis = [
   {
     id: 1,
@@ -103,6 +104,21 @@ const todosImoveis = [
 export default function DetalhesImovel() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [mensagem, setMensagem] = useState('');
+  const [enviado, setEnviado] = useState(false);
+
+  const enviarMensagem = (e: React.FormEvent) => {
+    e.preventDefault();
+    setEnviado(true);
+    setTimeout(() => {
+      setIsModalOpen(false);
+      setEnviado(false);
+      setMensagem('');
+    }, 2000);
+  };
+  
+  
 
   const imovel = todosImoveis.find(item => item.id === Number(id));
 
@@ -220,6 +236,14 @@ export default function DetalhesImovel() {
               <button className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-4 rounded-xl shadow-md transition-all hover:shadow-lg hover:-translate-y-0.5 mb-4 text-lg">
                 Candidatar-me a esta casa
               </button>
+
+              <button 
+                onClick={() => setIsModalOpen(true)}
+                className="w-full bg-white border-2 border-slate-200 hover:border-sky-500 hover:text-sky-600 text-slate-700 font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 mb-4"
+              >
+                <MessageSquare size={18} />
+                Contactar Senhorio
+              </button>
               
               <p className="text-center text-sm text-slate-500 mb-6 border-b border-slate-100 pb-6">
                 Sem custos de candidatura.
@@ -240,6 +264,47 @@ export default function DetalhesImovel() {
 
         </div>
       </main>
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="bg-slate-50 border-b border-slate-200 p-4 flex justify-between items-center">
+              <div>
+                <h3 className="font-bold text-slate-900">Mensagem para {imovel.senhorio}</h3>
+                <p className="text-xs text-slate-500">Sobre: {imovel.title}</p>
+              </div>
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-1">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              {enviado ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Send size={24} />
+                  </div>
+                  <h4 className="text-lg font-bold text-slate-900 mb-2">Mensagem Enviada!</h4>
+                  <p className="text-slate-500">O senhorio foi notificado e ira responder em breve.</p>
+                </div>
+              ) : (
+                <form onSubmit={enviarMensagem}>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">A tua mensagem</label>
+                  <textarea 
+                    required
+                    value={mensagem}
+                    onChange={(e) => setMensagem(e.target.value)}
+                    placeholder={`Ola ${imovel.senhorio}, estou muito interessado neste imovel. Ainda esta disponivel para visitas?`}
+                    className="w-full h-32 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm focus:border-sky-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 resize-none mb-4"
+                  ></textarea>
+                  <button type="submit" className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2">
+                    Enviar Mensagem <Send size={16} />
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
