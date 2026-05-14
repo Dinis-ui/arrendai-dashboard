@@ -11,7 +11,7 @@ export default function EsqueceuPassword() {
     e.preventDefault();
     setLoading(true);
 
-    // Simulacao de envio para o backend do Dinis
+    // Simulacao de envio para o backend 
     try {
       // Aqui faras o fetch('/api/password-reset/')
       await new Promise(resolve => setTimeout(resolve, 1500));
