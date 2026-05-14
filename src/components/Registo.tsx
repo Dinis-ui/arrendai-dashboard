@@ -1,17 +1,24 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Mail, Lock, ShieldCheck, ArrowLeft, UserCircle } from 'lucide-react';
+import { User, Mail, Lock, ShieldCheck, ArrowLeft, UserCircle, UploadCloud } from 'lucide-react';
 
 export default function Registo() {
   const navigate = useNavigate();
+  
+
   const [formData, setFormData] = useState({
     nome: '',
     username: '',
     email: '',
     password: '',
     confirmPassword: '',
-    userType: 'inquilino' 
+    userType: 'inquilino',
+    nif: '' 
   });
+  
+  
+  const [documento, setDocumento] = useState<File | null>(null);
+  
   const [mensagem, setMensagem] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -25,22 +32,56 @@ export default function Registo() {
     setLoading(true);
     setMensagem('');
 
+    // Validação de passwords
     if (formData.password !== formData.confirmPassword) {
-      setMensagem('As passwords nao coincidem.');
+      setMensagem('As passwords não coincidem.');
+      setLoading(false);
+      return;
+    }
+
+    // Validação do NIF 
+    if (formData.nif.length !== 9 || isNaN(Number(formData.nif))) {
+      setMensagem('O NIF tem de ter exatamente 9 números.');
+      setLoading(false);
+      return;
+    }
+
+    // Validação do Documento para Senhorios
+    if (formData.userType === 'senhorio' && !documento) {
+      setMensagem('É obrigatório enviar um documento de identificação para ser Senhorio.');
       setLoading(false);
       return;
     }
 
     try {
-      // Aqui ligacao a API quando Dinis criar
-    
-      setTimeout(() => {
+      const payload = {
+        nome: formData.nome,
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        user_type: formData.userType,
+        nif: formData.nif 
+      };
+
+      const resposta = await fetch('http://127.0.0.1:8000/api/users/register/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (resposta.ok) {
         setMensagem('Conta criada com sucesso!');
         setTimeout(() => navigate('/login'), 2000);
-      }, 1500);
-      
+      } else {
+        const erros = await resposta.json();
+        console.log("Erros do servidor:", erros);
+        setMensagem('Erro: Verifica os dados inseridos (Username, Email ou NIF já existem).');
+      }
+
     } catch {
-      setMensagem('Erro ao ligar ao servidor.');
+      setMensagem('Erro de ligação ao servidor.');
     } finally {
       setLoading(false);
     }
@@ -51,7 +92,6 @@ export default function Registo() {
       
       <div className="w-full max-w-xl">
         
-        
         <div className="mb-8 flex flex-col items-center text-center gap-3">
           <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-sky-500 text-3xl font-bold text-white shadow-lg shadow-sky-500/30">
             A
@@ -60,11 +100,10 @@ export default function Registo() {
             Criar conta no ArrendAI
           </h1>
           <p className="text-slate-500">
-            Junta-te a milhares de pessoas que ja utilizam a nossa plataforma.
+            Junta-te a milhares de pessoas que já utilizam a nossa plataforma.
           </p>
         </div>
 
-        
         <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm">
           <form onSubmit={fazerRegisto} className="space-y-6">
             
@@ -84,7 +123,6 @@ export default function Registo() {
                 />
               </div>
 
-              
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                   <UserCircle size={16} className="text-slate-400" /> Username
@@ -100,7 +138,7 @@ export default function Registo() {
               </div>
             </div>
 
-            
+            {/* EMAIL */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                 <Mail size={16} className="text-slate-400" /> Email
@@ -115,7 +153,24 @@ export default function Registo() {
               />
             </div>
 
-            
+            {/* NIF */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                <ShieldCheck size={16} className="text-slate-400" /> NIF (Número de Contribuinte)
+              </label>
+              <input 
+                type="text" 
+                name="nif"
+                maxLength={9}
+                required
+                value={formData.nif}
+                className="w-full rounded-xl border border-gray-200 bg-slate-50 px-4 py-3 text-sm focus:border-sky-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                placeholder="Ex: 123456789"
+                onChange={handleInputChange}
+              />
+            </div>
+
+            {/* ESCOLHA DE TIPO DE UTILIZADOR */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                 <ShieldCheck size={16} className="text-slate-400" /> Pretendes:
@@ -134,8 +189,38 @@ export default function Registo() {
               </div>
             </div>
 
+            {/* UPLOAD DE DOCUMENTO (SENHORIOS) */}
+            {formData.userType === 'senhorio' && (
+              <div className="mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  Verificação de Senhorio <span className="text-red-500">*</span>
+                </label>
+                <p className="text-xs text-slate-500 mb-2">
+                  Para garantir a segurança, precisamos de um comprovativo (Cartão de Cidadão ou Registo Predial).
+                </p>
+                
+                <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:bg-slate-50 hover:border-sky-300 transition-colors cursor-pointer relative">
+                  <input 
+                    type="file" 
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => setDocumento(e.target.files ? e.target.files[0] : null)}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <UploadCloud size={28} className="mx-auto text-sky-500 mb-2" />
+                  
+                  {documento ? (
+                    <p className="text-sm font-bold text-green-600">{documento.name}</p>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium text-slate-700">Clica ou arrasta para anexar documento</p>
+                      <p className="text-xs text-slate-400 mt-1">PDF, JPG ou PNG (Máx 5MB)</p>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                   <Lock size={16} className="text-slate-400" /> Password
@@ -150,7 +235,6 @@ export default function Registo() {
                 />
               </div>
 
-              
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                   <Lock size={16} className="text-slate-400" /> Confirmar Password
@@ -184,10 +268,9 @@ export default function Registo() {
           </form>
         </div>
 
-        
         <div className="mt-8 text-center">
           <Link to="/login" className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-sky-600 transition-colors">
-            <ArrowLeft size={16} /> Ja tens uma conta? Faz login aqui
+            <ArrowLeft size={16} /> Já tens uma conta? Faz login aqui
           </Link>
         </div>
 
