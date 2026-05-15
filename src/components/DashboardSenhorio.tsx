@@ -73,7 +73,7 @@ export default function DashboardSenhorio() {
           ))}
         </nav>
 
-        {/* --- BOTÃO DO PERFIL ATUALIZADO (Igual ao Portal Inquilino) --- */}
+        {/* PERFIL */}
         <div className="p-4 border-t border-slate-800">
           <div 
             onClick={() => setActiveTab('Perfil')}
@@ -88,7 +88,7 @@ export default function DashboardSenhorio() {
             </div>
           </div>
         </div>
-        {/* ------------------------------------------------------------- */}
+       
 
       </aside>
 

@@ -13,8 +13,11 @@ import {
   ArrowUpRight,
   User,
   MessageSquare,
-  Check // <-- IMPORTAMOS O CHECK
+  Check 
 } from 'lucide-react';
+
+// DADOS DE TESTE (MOCK DATA)
+// BACKEND: Estas listas devem vir da Base de Dados (ex: GET /api/imoveis)
 
 const menuItems = [
   { name: 'Pesquisar', icon: Search },
@@ -27,74 +30,15 @@ const tipologias = ['Todas', 'T0', 'T1', 'T2', 'T3', 'T4+'];
 const precos = ['Qualquer', '500€', '750€', '1.000€', '1.500€', '2.000€', '2.500€+'];
 
 const listings = [
-  {
-    id: 1,
-    title: 'Apartamento T2 com Varanda',
-    location: 'Príncipe Real, Lisboa',
-    price: 1350,
-    area: 78,
-    tipo: 'T2',
-    photo: 'https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=800',
-    tags: ['Varanda', 'Mobilado', 'Animais OK'],
-    available: 'Disponível agora',
-  },
-  {
-    id: 2,
-    title: 'Studio Moderno no Centro',
-    location: 'Baixa, Porto',
-    price: 820,
-    area: 42,
-    tipo: 'T0',
-    photo: 'https://images.pexels.com/photos/1428348/pexels-photo-1428348.jpeg?auto=compress&cs=tinysrgb&w=800',
-    tags: ['Wi-Fi incluído', 'Mobilado'],
-    available: 'Disponível agora',
-  },
-  {
-    id: 3,
-    title: 'Moradia T3 com Jardim',
-    location: 'Cascais, Setúbal',
-    price: 2100,
-    area: 145,
-    tipo: 'T3',
-    photo: 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&cs=tinysrgb&w=800',
-    tags: ['Jardim', 'Garagem', 'Piscina'],
-    available: '1 Jun 2025',
-  },
-  {
-    id: 4,
-    title: 'Apartamento T1 com Vista Rio',
-    location: 'Ribeira, Porto',
-    price: 980,
-    area: 55,
-    tipo: 'T1',
-    photo: 'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=800',
-    tags: ['Vista Rio', 'Mobilado'],
-    available: 'Disponível agora',
-  },
-  {
-    id: 5,
-    title: 'Loft T1 em Edifício Histórico',
-    location: 'Alfama, Lisboa',
-    price: 1150,
-    area: 65,
-    tipo: 'T1',
-    photo: 'https://images.pexels.com/photos/439391/pexels-photo-439391.jpeg?auto=compress&cs=tinysrgb&w=800',
-    tags: ['Pé-direito alto', 'Histórico'],
-    available: 'Disponível agora',
-  },
-  {
-    id: 6,
-    title: 'Apartamento T2 Novo',
-    location: 'Braga, Braga',
-    price: 890,
-    area: 88,
-    tipo: 'T2',
-    photo: 'https://images.pexels.com/photos/1918291/pexels-photo-1918291.jpeg?auto=compress&cs=tinysrgb&w=800',
-    tags: ['Novo', 'Garagem', 'Ar condicionado'],
-    available: '15 Mai 2025',
-  },
+  { id: 1, title: 'Apartamento T2 com Varanda', location: 'Príncipe Real, Lisboa', price: 1350, area: 78, tipo: 'T2', photo: 'https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=800', tags: ['Varanda', 'Mobilado', 'Animais OK'], available: 'Disponível agora' },
+  { id: 2, title: 'Studio Moderno no Centro', location: 'Baixa, Porto', price: 820, area: 42, tipo: 'T0', photo: 'https://images.pexels.com/photos/1428348/pexels-photo-1428348.jpeg?auto=compress&cs=tinysrgb&w=800', tags: ['Wi-Fi incluído', 'Mobilado'], available: 'Disponível agora' },
+  { id: 3, title: 'Moradia T3 com Jardim', location: 'Cascais, Setúbal', price: 2100, area: 145, tipo: 'T3', photo: 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&cs=tinysrgb&w=800', tags: ['Jardim', 'Garagem', 'Piscina'], available: '1 Jun 2025' },
+  { id: 4, title: 'Apartamento T1 com Vista Rio', location: 'Ribeira, Porto', price: 980, area: 55, tipo: 'T1', photo: 'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=800', tags: ['Vista Rio', 'Mobilado'], available: 'Disponível agora' },
+  { id: 5, title: 'Loft T1 em Edifício Histórico', location: 'Alfama, Lisboa', price: 1150, area: 65, tipo: 'T1', photo: 'https://images.pexels.com/photos/439391/pexels-photo-439391.jpeg?auto=compress&cs=tinysrgb&w=800', tags: ['Pé-direito alto', 'Histórico'], available: 'Disponível agora' },
+  { id: 6, title: 'Apartamento T2 Novo', location: 'Braga, Braga', price: 890, area: 88, tipo: 'T2', photo: 'https://images.pexels.com/photos/1918291/pexels-photo-1918291.jpeg?auto=compress&cs=tinysrgb&w=800', tags: ['Novo', 'Garagem', 'Ar condicionado'], available: '15 Mai 2025' },
 ];
 
+// Tipagem para os filtros do TypeScript
 type Filters = {
   distrito: string;
   precoMax: string;
@@ -102,17 +46,10 @@ type Filters = {
   areaMin: string;
 };
 
-function SelectFilter({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  options: string[];
-  onChange: (v: string) => void;
-}) {
+
+
+// Componente para desenhar os Selects dos filtros
+function SelectFilter({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (v: string) => void; }) {
   return (
     <div className="relative">
       <label className="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wide">{label}</label>
@@ -132,8 +69,9 @@ function SelectFilter({
   );
 }
 
+// Componente que desenha o Cartão de cada Imóvel
 function PropertyCard({ listing, onApply }: { listing: typeof listings[0]; onApply: (id: number) => void }) {
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved] = useState(false); // Estado para o botão de favoritos (Coração)
 
   return (
     <Link 
@@ -141,29 +79,21 @@ function PropertyCard({ listing, onApply }: { listing: typeof listings[0]; onApp
       className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 group flex flex-col cursor-pointer block"
     >
       <div className="relative overflow-hidden h-48">
-        <img
-          src={listing.photo}
-          alt={listing.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-        />
+        <img src={listing.photo} alt={listing.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
         <div className="absolute top-3 left-3">
-          <span className="bg-white/90 backdrop-blur-sm text-slate-700 text-xs font-semibold px-2.5 py-1 rounded-full">
-            {listing.tipo}
-          </span>
+          <span className="bg-white/90 backdrop-blur-sm text-slate-700 text-xs font-semibold px-2.5 py-1 rounded-full">{listing.tipo}</span>
         </div>
         <button
           onClick={(e) => {
-            e.preventDefault();
-            setSaved(!saved);
+            e.preventDefault(); // Impede que o clique no coração mude a página
+            setSaved(!saved); // BACKEND: Isto precisará de um POST para guardar nos Favoritos da DB
           }}
           className="absolute top-3 right-3 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors"
         >
           <Heart size={15} className={saved ? 'fill-rose-500 text-rose-500' : 'text-slate-400'} />
         </button>
         <div className="absolute bottom-3 left-3">
-          <span className="bg-emerald-500 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
-            {listing.available}
-          </span>
+          <span className="bg-emerald-500 text-white text-xs font-semibold px-2.5 py-1 rounded-full">{listing.available}</span>
         </div>
       </div>
 
@@ -171,16 +101,12 @@ function PropertyCard({ listing, onApply }: { listing: typeof listings[0]; onApp
         <div className="mb-3">
           <h3 className="font-bold text-slate-800 text-base leading-snug mb-1">{listing.title}</h3>
           <div className="flex items-center gap-1 text-slate-500 text-sm">
-            <MapPin size={13} />
-            <span>{listing.location}</span>
+            <MapPin size={13} /> <span>{listing.location}</span>
           </div>
         </div>
 
         <div className="flex items-center gap-3 text-xs text-slate-500 mb-4">
-          <span className="flex items-center gap-1">
-            <Home size={12} />
-            {listing.area} m²
-          </span>
+          <span className="flex items-center gap-1"><Home size={12} />{listing.area} m²</span>
           <span className="w-1 h-1 rounded-full bg-slate-300"></span>
           {listing.tags.slice(0, 2).map((tag) => (
             <span key={tag} className="bg-sky-50 text-sky-700 px-2 py-0.5 rounded-full font-medium">{tag}</span>
@@ -194,7 +120,7 @@ function PropertyCard({ listing, onApply }: { listing: typeof listings[0]; onApp
           </div>
           <button
             onClick={(e) => {
-              e.preventDefault();
+              e.preventDefault(); // Impede que o botão de candidatar mude a página
               onApply(listing.id);
             }}
             className="flex items-center gap-1.5 bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm"
@@ -207,8 +133,11 @@ function PropertyCard({ listing, onApply }: { listing: typeof listings[0]; onApp
   );
 }
 
+
 export default function PortalInquilino() {
   const navigate = useNavigate();
+  
+  // GESTÃO DE ESTADOS (Navegação e Filtros)
   const [activeTab, setActiveTab] = useState('Pesquisar');
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<Filters>({
@@ -217,10 +146,14 @@ export default function PortalInquilino() {
     tipologia: 'Todas',
     areaMin: '',
   });
+  
+  // Array que guarda os IDs dos imóveis a que o utilizador já se candidatou
+  // BACKEND: Ao fazer login, devemos carregar as candidaturas do utilizador da BD para este estado
   const [appliedIds, setAppliedIds] = useState<number[]>([]);
 
-  // --- ESTADOS PARA AS NOTIFICAÇÕES DO INQUILINO ---
+  // GESTÃO DE ESTADOS (Notificações)
   const [showNotifications, setShowNotifications] = useState(false);
+  // BACKEND: As notificações devem vir via WebSockets ou GET request periódico
   const [notificacoes, setNotificacoes] = useState([
     { id: 1, titulo: 'Candidatura Aprovada!', desc: 'O senhorio aceitou a tua candidatura para o T2 no Príncipe Real.', tempo: 'Há 10 min', lida: false },
     { id: 2, titulo: 'Nova Mensagem', desc: 'João Silva enviou-te uma mensagem sobre o contrato.', tempo: 'Há 1 hora', lida: false },
@@ -228,15 +161,20 @@ export default function PortalInquilino() {
   ]);
 
   const naoLidas = notificacoes.filter(n => !n.lida).length;
-  // ------------------------------------------------
 
+  // Função disparada quando se clica em "Candidatar-me" num anúncio
   const handleApply = (id: number) => {
+    // Adiciona o ID do imóvel à lista de candidaturas (evitando duplicados)
+    // BACKEND: Fazer aqui o POST request para submeter a candidatura real
     setAppliedIds((prev) => prev.includes(id) ? prev : [...prev, id]);
   };
 
+  // Função auxiliar para atualizar o estado dos filtros
   const setFilter = (key: keyof Filters) => (value: string) =>
     setFilters((prev) => ({ ...prev, [key]: value }));
 
+  // LÓGICA DE FILTRAGEM (Feita no frontend nesta fase)
+  // BACKEND: Se a base de dados crescer muito, esta filtragem deve ser feita no backend (passando query params no fetch)
   const filtered = listings.filter((l) => {
     const matchSearch = search === '' || l.title.toLowerCase().includes(search.toLowerCase()) || l.location.toLowerCase().includes(search.toLowerCase());
     const matchDistrito = filters.distrito === 'Todos' || l.location.includes(filters.distrito);
@@ -249,8 +187,9 @@ export default function PortalInquilino() {
   return (
     <div className="flex h-screen bg-gray-50 font-sans text-slate-900">
 
-      {/* SIDEBAR */}
+      
       <aside className="w-64 bg-slate-900 text-white flex flex-col">
+        {/* LOGO */}
         <div className="p-6 flex items-center gap-3">
           <div className="w-8 h-8 bg-sky-500 rounded-lg flex items-center justify-center">
             <span className="font-bold text-xl">A</span>
@@ -258,6 +197,7 @@ export default function PortalInquilino() {
           <span className="text-xl font-bold tracking-tight">ArrendAI</span>
         </div>
 
+        {/* MENU */}
         <nav className="flex-1 px-4 mt-4">
           {menuItems.map((item) => (
             <button
@@ -273,23 +213,19 @@ export default function PortalInquilino() {
               <span className="font-medium text-sm">{item.name}</span>
             </button>
           ))}
-          <Link 
-            to="/mensagens" 
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-slate-400 hover:bg-slate-800 hover:text-white mt-1"
-          >
+          <Link to="/mensagens" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-slate-400 hover:bg-slate-800 hover:text-white mt-1">
             <MessageSquare size={20} />
             <span className="font-medium text-sm">Mensagens</span>
           </Link>
         </nav>
 
+        {/* RODAPÉ DO MENU (Perfil) */}
         <div className="p-4 border-t border-slate-800">
           <div 
-            onClick={() => navigate('/perfil')}
+            onClick={() => navigate('/perfil')} // Navega para a página de perfil
             className="flex items-center gap-3 px-2 py-2 cursor-pointer hover:bg-slate-800 rounded-lg transition-colors"
           >
-            <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold">
-              MF
-            </div>
+            <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold">MF</div>
             <div>
               <p className="text-sm font-medium text-white">Maria Ferreira</p>
               <p className="text-xs text-slate-400">Inquilina</p>
@@ -298,18 +234,18 @@ export default function PortalInquilino() {
         </div>
       </aside>
 
-      {/* MAIN */}
+     
       <main className="flex-1 flex flex-col overflow-hidden">
 
-        {/* HEADER */}
+        {/* HEADER (Topo) */}
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 flex-shrink-0 relative z-20">
           <div>
             <h1 className="text-lg font-bold text-slate-800">Portal do Inquilino</h1>
             <p className="text-xs text-slate-400">Encontra o teu próximo lar</p>
           </div>
+          
           <div className="flex items-center gap-3">
-            
-            {/* NOTIFICAÇÕES */}
+            {/* COMPONENTE DE NOTIFICAÇÕES */}
             <div className="relative">
               <button 
                 onClick={() => setShowNotifications(!showNotifications)}
@@ -321,10 +257,9 @@ export default function PortalInquilino() {
                 )}
               </button>
 
-              {/* CAIXA DE DROPDOWN */}
+              {/* DROPDOWN DE NOTIFICAÇÕES */}
               {showNotifications && (
                 <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-top-2 z-50">
-                  
                   <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                     <h3 className="font-bold text-slate-800">Notificações</h3>
                     {naoLidas > 0 && (
@@ -336,16 +271,12 @@ export default function PortalInquilino() {
                       </button>
                     )}
                   </div>
-
                   <div className="max-h-[350px] overflow-y-auto">
                     {notificacoes.length === 0 ? (
                       <div className="p-6 text-center text-slate-500 text-sm">Não tens notificações.</div>
                     ) : (
                       notificacoes.map(notif => (
-                        <div 
-                          key={notif.id} 
-                          className={`p-4 border-b border-slate-50 cursor-pointer transition-colors hover:bg-slate-50 ${notif.lida ? 'opacity-60' : 'bg-sky-50/20'}`}
-                        >
+                        <div key={notif.id} className={`p-4 border-b border-slate-50 cursor-pointer transition-colors hover:bg-slate-50 ${notif.lida ? 'opacity-60' : 'bg-sky-50/20'}`}>
                           <p className={`text-sm font-bold ${notif.lida ? 'text-slate-700' : 'text-slate-900'}`}>{notif.titulo}</p>
                           <p className="text-xs text-slate-600 mt-1 line-clamp-2">{notif.desc}</p>
                           <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-wider">{notif.tempo}</p>
@@ -353,11 +284,9 @@ export default function PortalInquilino() {
                       ))
                     )}
                   </div>
-
                   <div className="p-3 text-center border-t border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors">
                     <span className="text-xs font-bold text-slate-500">Ver todo o histórico</span>
                   </div>
-
                 </div>
               )}
             </div>
@@ -368,18 +297,18 @@ export default function PortalInquilino() {
           </div>
         </header>
 
+        {/* ÁREA DE CONTEÚDO DINÂMICO */}
         <div className="flex-1 overflow-y-auto">
 
+          {/* ABA PESQUISAR */}
           {activeTab === 'Pesquisar' && (
             <div className="p-8">
-
-              {/* SEARCH BAR */}
+              {/* ZONA DE FILTROS */}
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-8">
                 <div className="flex items-center gap-3 mb-5">
                   <SlidersHorizontal size={18} className="text-sky-600" />
                   <h2 className="font-bold text-slate-800">Pesquisa de Imóveis</h2>
                 </div>
-
                 <div className="relative mb-5">
                   <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
@@ -390,7 +319,6 @@ export default function PortalInquilino() {
                     className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all"
                   />
                 </div>
-
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <SelectFilter label="Distrito" value={filters.distrito} options={distritos} onChange={setFilter('distrito')} />
                   <SelectFilter label="Preço Máximo" value={filters.precoMax} options={precos} onChange={setFilter('precoMax')} />
@@ -408,15 +336,12 @@ export default function PortalInquilino() {
                 </div>
               </div>
 
-              {/* RESULTS HEADER */}
+              {/* LISTAGEM DE IMÓVEIS (Grelha) */}
               <div className="flex items-center justify-between mb-5">
-                <p className="text-slate-600 text-sm font-medium">
-                  <span className="font-bold text-slate-900">{filtered.length}</span> imóveis encontrados
-                </p>
+                <p className="text-slate-600 text-sm font-medium"><span className="font-bold text-slate-900">{filtered.length}</span> imóveis encontrados</p>
                 <span className="text-xs text-slate-400">Ordenado por: Relevância</span>
               </div>
 
-              {/* GRID */}
               {filtered.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {filtered.map((listing) => (
@@ -425,9 +350,7 @@ export default function PortalInquilino() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-24 text-center">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                    <Home size={28} className="text-gray-400" />
-                  </div>
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4"><Home size={28} className="text-gray-400" /></div>
                   <p className="text-slate-700 font-semibold mb-1">Nenhum imóvel encontrado</p>
                   <p className="text-slate-400 text-sm">Tenta ajustar os filtros de pesquisa.</p>
                 </div>
@@ -435,14 +358,14 @@ export default function PortalInquilino() {
             </div>
           )}
 
+          {/* ABA MINHAS CANDIDATURAS */}
           {activeTab === 'Minhas Candidaturas' && (
             <div className="p-8">
               <h2 className="text-xl font-bold text-slate-800 mb-6">Minhas Candidaturas</h2>
+              {/* Filtra a lista principal para mostrar apenas os imóveis onde o ID está em 'appliedIds' */}
               {appliedIds.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-24 text-center">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                    <FileText size={28} className="text-gray-400" />
-                  </div>
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4"><FileText size={28} className="text-gray-400" /></div>
                   <p className="text-slate-700 font-semibold mb-1">Sem candidaturas ainda</p>
                   <p className="text-slate-400 text-sm">Candidata-te a imóveis na secção de Pesquisa.</p>
                 </div>
@@ -457,6 +380,7 @@ export default function PortalInquilino() {
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-slate-800">{l.price.toLocaleString('pt-PT')}€<span className="text-slate-400 font-normal text-sm">/mês</span></p>
+                        {/* BACKEND: O estado "Em análise" deve ser dinâmico consoante o status na DB */}
                         <span className="text-xs font-semibold text-amber-700 bg-amber-100 px-2.5 py-1 rounded-full mt-1 inline-block">Em análise</span>
                       </div>
                     </div>
@@ -466,13 +390,13 @@ export default function PortalInquilino() {
             </div>
           )}
 
+          {/* ABA AS MINHAS RENDAS */}
           {activeTab === 'As Minhas Rendas' && (
             <div className="p-8">
               <h2 className="text-xl font-bold text-slate-800 mb-6">As Minhas Rendas</h2>
+              {/* BACKEND: Apresentar histórico de faturas/pagamentos do inquilino aqui */}
               <div className="flex flex-col items-center justify-center py-24 text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                  <Wallet size={28} className="text-gray-400" />
-                </div>
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4"><Wallet size={28} className="text-gray-400" /></div>
                 <p className="text-slate-700 font-semibold mb-1">Sem contrato ativo</p>
                 <p className="text-slate-400 text-sm">Quando tiveres um arrendamento ativo, as rendas aparecerão aqui.</p>
               </div>
