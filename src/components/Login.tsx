@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom'; 
-import { Building2, Home, ShieldAlert } from 'lucide-react'; // <-- Adicionámos os ícones aqui
+import { Building2, Home, ShieldAlert } from 'lucide-react'; 
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -15,7 +15,7 @@ export default function Login() {
     setLoading(true);
     setMensagem('');
 
-    // --- SIMULAÇÃO DE LOGIN PARA TESTES NO FRONTEND ---
+    // SIMULAÇÃO DE LOGIN 
     setTimeout(() => {
       setMensagem('Entraste com sucesso!');
       navigate('/portal');
@@ -45,7 +45,7 @@ export default function Login() {
     */
   };
 
-  // --- BOTÕES MÁGICOS (APENAS PARA TESTES) ---
+  // TESTES
   const entrarComoSenhorio = () => navigate('/dashboard-senhorio'); 
   const entrarComoInquilino = () => navigate('/portal'); 
 
@@ -126,14 +126,14 @@ export default function Login() {
             )}
           </form>
 
-          {/* --- NOVA SECÇÃO: DIVISÓRIA PARA ACESSO RÁPIDO --- */}
+          
           <div className="mt-8 flex items-center gap-4">
             <div className="flex-1 h-px bg-gray-200"></div>
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Acesso Rápido (Dev)</span>
             <div className="flex-1 h-px bg-gray-200"></div>
           </div>
 
-          {/* --- NOVA SECÇÃO: BOTÕES MÁGICOS DE TESTE --- */}
+          {/* TESTE */}
           <div className="mt-6 grid grid-cols-2 gap-4">
             <button 
               onClick={entrarComoInquilino}
