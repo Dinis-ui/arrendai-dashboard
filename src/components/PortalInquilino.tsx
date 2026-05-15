@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // Importacao adicionada para permitir a navegacao
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Search,
   MapPin,
@@ -13,6 +13,7 @@ import {
   ArrowUpRight,
   User,
   MessageSquare,
+  Check // <-- IMPORTAMOS O CHECK
 } from 'lucide-react';
 
 const menuItems = [
@@ -135,7 +136,6 @@ function PropertyCard({ listing, onApply }: { listing: typeof listings[0]; onApp
   const [saved, setSaved] = useState(false);
 
   return (
-    
     <Link 
       to={`/imovel/${listing.id}`}
       className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 group flex flex-col cursor-pointer block"
@@ -153,7 +153,7 @@ function PropertyCard({ listing, onApply }: { listing: typeof listings[0]; onApp
         </div>
         <button
           onClick={(e) => {
-            e.preventDefault(); // Impede que o clique no botao de favorito ative o link da pagina
+            e.preventDefault();
             setSaved(!saved);
           }}
           className="absolute top-3 right-3 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors"
@@ -194,7 +194,7 @@ function PropertyCard({ listing, onApply }: { listing: typeof listings[0]; onApp
           </div>
           <button
             onClick={(e) => {
-              e.preventDefault(); // Impede que o clique no botao de candidatar ative o link geral
+              e.preventDefault();
               onApply(listing.id);
             }}
             className="flex items-center gap-1.5 bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm"
@@ -218,6 +218,17 @@ export default function PortalInquilino() {
     areaMin: '',
   });
   const [appliedIds, setAppliedIds] = useState<number[]>([]);
+
+  // --- ESTADOS PARA AS NOTIFICAÇÕES DO INQUILINO ---
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notificacoes, setNotificacoes] = useState([
+    { id: 1, titulo: 'Candidatura Aprovada!', desc: 'O senhorio aceitou a tua candidatura para o T2 no Príncipe Real.', tempo: 'Há 10 min', lida: false },
+    { id: 2, titulo: 'Nova Mensagem', desc: 'João Silva enviou-te uma mensagem sobre o contrato.', tempo: 'Há 1 hora', lida: false },
+    { id: 3, titulo: 'Alerta de Pesquisa', desc: 'Há 3 novos imóveis em Lisboa que correspondem aos teus favoritos.', tempo: 'Há 1 dia', lida: true },
+  ]);
+
+  const naoLidas = notificacoes.filter(n => !n.lida).length;
+  // ------------------------------------------------
 
   const handleApply = (id: number) => {
     setAppliedIds((prev) => prev.includes(id) ? prev : [...prev, id]);
@@ -291,15 +302,66 @@ export default function PortalInquilino() {
       <main className="flex-1 flex flex-col overflow-hidden">
 
         {/* HEADER */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 flex-shrink-0">
+        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 flex-shrink-0 relative z-20">
           <div>
             <h1 className="text-lg font-bold text-slate-800">Portal do Inquilino</h1>
             <p className="text-xs text-slate-400">Encontra o teu próximo lar</p>
           </div>
           <div className="flex items-center gap-3">
-            <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-full relative">
-              <Bell size={20} />
-            </button>
+            
+            {/* NOTIFICAÇÕES */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowNotifications(!showNotifications)}
+                className={`p-2 rounded-full relative transition-colors ${showNotifications ? 'bg-sky-50 text-sky-600' : 'text-gray-500 hover:bg-gray-100'}`}
+              >
+                <Bell size={20} />
+                {naoLidas > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                )}
+              </button>
+
+              {/* CAIXA DE DROPDOWN */}
+              {showNotifications && (
+                <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-top-2 z-50">
+                  
+                  <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                    <h3 className="font-bold text-slate-800">Notificações</h3>
+                    {naoLidas > 0 && (
+                      <button 
+                        onClick={() => setNotificacoes(notificacoes.map(n => ({ ...n, lida: true })))}
+                        className="text-xs font-bold text-sky-600 hover:text-sky-700 flex items-center gap-1 transition-colors"
+                      >
+                        <Check size={12} /> Marcar como lidas
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="max-h-[350px] overflow-y-auto">
+                    {notificacoes.length === 0 ? (
+                      <div className="p-6 text-center text-slate-500 text-sm">Não tens notificações.</div>
+                    ) : (
+                      notificacoes.map(notif => (
+                        <div 
+                          key={notif.id} 
+                          className={`p-4 border-b border-slate-50 cursor-pointer transition-colors hover:bg-slate-50 ${notif.lida ? 'opacity-60' : 'bg-sky-50/20'}`}
+                        >
+                          <p className={`text-sm font-bold ${notif.lida ? 'text-slate-700' : 'text-slate-900'}`}>{notif.titulo}</p>
+                          <p className="text-xs text-slate-600 mt-1 line-clamp-2">{notif.desc}</p>
+                          <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-wider">{notif.tempo}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <div className="p-3 text-center border-t border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors">
+                    <span className="text-xs font-bold text-slate-500">Ver todo o histórico</span>
+                  </div>
+
+                </div>
+              )}
+            </div>
+
             <div className="w-9 h-9 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold text-sm">
               <User size={18} />
             </div>

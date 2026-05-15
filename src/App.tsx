@@ -6,6 +6,7 @@ import Perfil from './components/Perfil';
 import Registo from './components/Registo';
 import EsqueceuPassword from './components/EsqueceuPassword';
 import Mensagens from './components/Mensagens';
+import DashboardSenhorio from './components/DashboardSenhorio';
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/perfil" element={<Perfil />} />
         <Route path="/mensagens" element={<Mensagens />} />
+        <Route path="/dashboard-senhorio" element={<DashboardSenhorio />} />
       </Routes>
     </BrowserRouter>
   );

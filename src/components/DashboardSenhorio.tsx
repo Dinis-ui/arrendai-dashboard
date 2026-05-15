@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Building2, Megaphone, Users, Wallet, MessageSquare, Search, Bell } from 'lucide-react';
+import { Building2, Megaphone, Users, Wallet, MessageSquare, Search, Bell, Check } from 'lucide-react';
 
 // IMPORTAÇÃO DE TODOS OS COMPONENTES MODULARES
 import Anuncios from './Anuncios';
@@ -18,6 +18,16 @@ const menuItems = [
 
 export default function DashboardSenhorio() {
   const [activeTab, setActiveTab] = useState('Anúncios');
+
+  // ESTADOS PARA AS NOTIFICAÇÕES
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notificacoes, setNotificacoes] = useState([
+    { id: 1, titulo: 'Nova Candidatura', desc: 'Ana Martins candidatou-se ao Quarto em Entrecampos.', tempo: 'Há 5 min', lida: false },
+    { id: 2, titulo: 'Renda Paga', desc: 'Francisco Silva pagou a renda de Maio.', tempo: 'Há 2 horas', lida: false },
+    { id: 3, titulo: 'Aviso do Sistema', desc: 'O seu anúncio T2 Cascais foi aprovado.', tempo: 'Há 1 dia', lida: true },
+  ]);
+
+  const naoLidas = notificacoes.filter(n => !n.lida).length;
 
   // FUNÇÃO QUE RENDERIZA O COMPONENTE CORRETO
   const renderContent = () => {
@@ -73,7 +83,7 @@ export default function DashboardSenhorio() {
       <main className="flex-1 flex flex-col overflow-hidden">
         
         {/* HEADER */}
-        <header className="h-20 bg-white border-b border-gray-200 flex items-center justify-between px-8 shrink-0">
+        <header className="h-20 bg-white border-b border-gray-200 flex items-center justify-between px-8 shrink-0 relative z-20">
           <div className="relative w-96">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input 
@@ -82,10 +92,59 @@ export default function DashboardSenhorio() {
               className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:bg-white outline-none transition-all" 
             />
           </div>
-          <button className="p-2.5 text-gray-500 hover:bg-slate-100 rounded-xl relative transition-colors">
-            <Bell size={22} />
-            <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
-          </button>
+          
+          {/* ÁREA DAS NOTIFICAÇÕES */}
+          <div className="relative">
+            <button 
+              onClick={() => setShowNotifications(!showNotifications)}
+              className={`p-2.5 rounded-xl relative transition-colors ${showNotifications ? 'bg-sky-50 text-sky-600' : 'text-gray-500 hover:bg-slate-100'}`}
+            >
+              <Bell size={22} />
+              {naoLidas > 0 && (
+                <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+              )}
+            </button>
+
+            {/* CAIXA DE DROPDOWN */}
+            {showNotifications && (
+              <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                
+                <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                  <h3 className="font-bold text-slate-800">Notificações</h3>
+                  {naoLidas > 0 && (
+                    <button 
+                      onClick={() => setNotificacoes(notificacoes.map(n => ({ ...n, lida: true })))}
+                      className="text-xs font-bold text-sky-600 hover:text-sky-700 flex items-center gap-1 transition-colors"
+                    >
+                      <Check size={12} /> Marcar como lidas
+                    </button>
+                  )}
+                </div>
+
+                <div className="max-h-[350px] overflow-y-auto">
+                  {notificacoes.length === 0 ? (
+                    <div className="p-6 text-center text-slate-500 text-sm">Não tens notificações.</div>
+                  ) : (
+                    notificacoes.map(notif => (
+                      <div 
+                        key={notif.id} 
+                        className={`p-4 border-b border-slate-50 cursor-pointer transition-colors hover:bg-slate-50 ${notif.lida ? 'opacity-60' : 'bg-sky-50/20'}`}
+                      >
+                        <p className={`text-sm font-bold ${notif.lida ? 'text-slate-700' : 'text-slate-900'}`}>{notif.titulo}</p>
+                        <p className="text-xs text-slate-600 mt-1 line-clamp-2">{notif.desc}</p>
+                        <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-wider">{notif.tempo}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="p-3 text-center border-t border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors">
+                  <span className="text-xs font-bold text-slate-500">Ver todo o histórico</span>
+                </div>
+
+              </div>
+            )}
+          </div>
         </header>
 
         {/* ÁREA DINÂMICA (Renderiza o componente selecionado no menu) */}

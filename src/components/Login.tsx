@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom'; 
+import { Building2, Home, ShieldAlert } from 'lucide-react'; // <-- Adicionámos os ícones aqui
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -43,6 +44,11 @@ export default function Login() {
     }
     */
   };
+
+  // --- BOTÕES MÁGICOS (APENAS PARA TESTES) ---
+  const entrarComoSenhorio = () => navigate('/dashboard-senhorio'); 
+  const entrarComoInquilino = () => navigate('/portal'); 
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 font-sans text-slate-900">
       
@@ -110,7 +116,6 @@ export default function Login() {
               {loading ? 'A verificar...' : 'Entrar na conta'}
             </button>
 
-            
             {mensagem && (
               <div className={`mt-4 rounded-lg p-3 text-center text-sm font-medium ${
                 mensagem.includes('sucesso') ? 'bg-green-50 text-green-700 border border-green-200' : 
@@ -120,13 +125,47 @@ export default function Login() {
               </div>
             )}
           </form>
+
+          {/* --- NOVA SECÇÃO: DIVISÓRIA PARA ACESSO RÁPIDO --- */}
+          <div className="mt-8 flex items-center gap-4">
+            <div className="flex-1 h-px bg-gray-200"></div>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Acesso Rápido (Dev)</span>
+            <div className="flex-1 h-px bg-gray-200"></div>
+          </div>
+
+          {/* --- NOVA SECÇÃO: BOTÕES MÁGICOS DE TESTE --- */}
+          <div className="mt-6 grid grid-cols-2 gap-4">
+            <button 
+              onClick={entrarComoInquilino}
+              type="button"
+              className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 border-emerald-100 bg-emerald-50 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-100 transition-all group"
+            >
+              <Home size={24} className="group-hover:scale-110 transition-transform" />
+              <span className="text-sm font-bold">Portal Inquilino</span>
+            </button>
+            
+            <button 
+              onClick={entrarComoSenhorio}
+              type="button"
+              className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 border-sky-100 bg-sky-50 text-sky-700 hover:border-sky-300 hover:bg-sky-100 transition-all group"
+            >
+              <Building2 size={24} className="group-hover:scale-110 transition-transform" />
+              <span className="text-sm font-bold">Painel Senhorio</span>
+            </button>
+          </div>
+          
+          <div className="mt-4 flex items-start gap-2 text-xs text-slate-400 bg-slate-50 p-3 rounded-lg border border-slate-100">
+            <ShieldAlert size={16} className="shrink-0 text-slate-400" />
+            <p>Estes botões saltam o login real para facilitar os testes de interface. Devem ser removidos na versão final.</p>
+          </div>
+
         </div>
 
         
         <p className="mt-8 text-center text-sm text-slate-500">
-          Ainda nao tens conta?{' '}
+          Ainda não tens conta?{' '}
           <Link to="/registo" className="font-semibold text-sky-500 hover:text-sky-600">
-            Registar como inquilino
+            Registar conta
           </Link>
         </p>
       </div>

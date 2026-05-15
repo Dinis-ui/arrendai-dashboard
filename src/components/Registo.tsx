@@ -1,4 +1,3 @@
-import DashboardSenhorio from './DashboardSenhorio';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Mail, Lock, ShieldCheck, ArrowLeft, UserCircle, UploadCloud } from 'lucide-react';
@@ -87,7 +86,7 @@ export default function Registo() {
       setLoading(false);
     }
   };
-return <DashboardSenhorio />;
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 font-sans text-slate-900 py-12 px-6">
       
