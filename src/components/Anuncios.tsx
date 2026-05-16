@@ -11,6 +11,10 @@ import {
   MapPin, 
   Euro,
   FileText,
+  Eye,       
+  Edit2,     
+  PauseCircle, 
+  Trash2     
 } from 'lucide-react';
 
 export default function Anuncios() {
@@ -18,6 +22,18 @@ export default function Anuncios() {
   // ESTADOS 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false); 
+
+  // Estado para saber qual menu de ações está aberto (guarda o ID do anúncio)
+  const [menuAberto, setMenuAberto] = useState<number | null>(null);
+
+  // Função para abrir/fechar o menu
+  const toggleMenu = (id: number) => {
+    if (menuAberto === id) {
+      setMenuAberto(null);
+    } else {
+      setMenuAberto(id);
+    }
+  };
   
   // ESTADOS PARA O UPLOAD DE FOTOS
   // Guarda um array de objetos com o ficheiro em si e um URL temporário para mostrar a imagem
@@ -93,15 +109,16 @@ export default function Anuncios() {
         </button>
       </div>
 
-      {/* TABELA DE ANÚNCIOS */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <table className="w-full text-left">
+     {/* TABELA DE ANÚNCIOS */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+        <table className="w-full text-left border-collapse">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
-              <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-wider">Título</th>
+              {/* Adicionámos rounded-tl-2xl e rounded-tr-2xl aqui para manter os cantos redondos sem cortar os menus */}
+              <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-wider rounded-tl-2xl">Título</th>
               <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-wider">Estado de Moderação</th>
               <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-wider">Preço</th>
-              <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-wider text-right">Ações</th>
+              <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-wider text-right rounded-tr-2xl">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -120,9 +137,36 @@ export default function Anuncios() {
                   </span>
                 </td>
                 <td className="px-6 py-5 font-bold text-slate-700">{anuncio.preco}</td>
-                <td className="px-6 py-5 text-right">
-                  <button className="text-slate-400 hover:text-slate-600 p-2 rounded-lg"><MoreVertical size={20} /></button>
+                
+                {/* COLUNA DAS AÇÕES */}
+                <td className="px-6 py-5 text-right relative">
+                  <button 
+                    onClick={() => toggleMenu(anuncio.id)}
+                    className={`p-2 rounded-lg transition-colors ${menuAberto === anuncio.id ? 'bg-slate-100 text-slate-800' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}
+                  >
+                    <MoreVertical size={20} />
+                  </button>
+
+                  {/* MENU DROPDOWN DAS AÇÕES (Agora com z-50 para ficar por cima de tudo) */}
+                  {menuAberto === anuncio.id && (
+                    <div className="absolute right-12 top-10 w-48 bg-white rounded-2xl shadow-xl border border-slate-200 py-2 z-50 animate-in fade-in zoom-in-95">
+                      <button className="w-full px-4 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors">
+                        <Eye size={16} className="text-slate-400" /> Ver Anúncio
+                      </button>
+                      <button className="w-full px-4 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors">
+                        <Edit2 size={16} className="text-sky-500" /> Editar Dados
+                      </button>
+                      <button className="w-full px-4 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors">
+                        <PauseCircle size={16} className="text-amber-500" /> Pausar Anúncio
+                      </button>
+                      <div className="h-px bg-slate-100 my-1 mx-2"></div>
+                      <button className="w-full px-4 py-2.5 text-left text-sm font-semibold text-red-600 hover:bg-red-50 flex items-center gap-3 transition-colors">
+                        <Trash2 size={16} className="text-red-500" /> Apagar
+                      </button>
+                    </div>
+                  )}
                 </td>
+
               </tr>
             ))}
           </tbody>
