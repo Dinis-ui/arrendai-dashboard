@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os # <-- ADICIONADO AQUI
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -143,3 +144,6 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
 ]
 
+# <-- NOVO: Configurações para Upload de Ficheiros (Documentos e Imagens) -->
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
