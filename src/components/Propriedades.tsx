@@ -7,12 +7,11 @@ import {
   Banknote, 
   Users, 
   PenSquare,
-  ImageIcon
+  ImageIcon,
+  X,
+  CheckCircle2
 } from 'lucide-react';
 
-// ==========================================
-// MOCK DATA: Adicionámos as imagens a cada propriedade
-// ==========================================
 const propriedadesData = [
   { 
     id: 1, 
@@ -42,19 +41,28 @@ const propriedadesData = [
 
 export default function Propriedades() {
   const [propriedadeSelecionadaId, setPropriedadeSelecionadaId] = useState<number | null>(null);
+  
+  // Estado
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
 
-  // ==========================================
-  // VISTA 2: DETALHES DA PROPRIEDADE
-  // ==========================================
+  // Submeter
+  const handleSaveEdit = () => {
+    setIsEditModalOpen(false);
+    setShowSuccessToast(true);
+    setTimeout(() => setShowSuccessToast(false), 3000);
+  };
+  
+  // Detalhes da propriedade
   if (propriedadeSelecionadaId !== null) {
     const prop = propriedadesData.find(p => p.id === propriedadeSelecionadaId);
     
     if (!prop) return null;
 
     return (
-      <div className="animate-in fade-in slide-in-from-right-4 duration-500 pb-10">
+      <div className="animate-in fade-in slide-in-from-right-4 duration-500 pb-10 relative">
         
-        {/* CABEÇALHO DO DETALHE */}
+        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <button 
@@ -76,33 +84,36 @@ export default function Propriedades() {
             </div>
           </div>
           
-          <button className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-xl text-sm font-bold transition-colors shadow-sm">
+          {/* BOTÃO ATUALIZADO */}
+          <button 
+            onClick={() => setIsEditModalOpen(true)}
+            className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-xl text-sm font-bold transition-colors shadow-sm"
+          >
             <PenSquare size={16} /> Editar Propriedade
           </button>
         </div>
 
-        {/* ========================================== */}
-        {/* NOVA ÁREA: FOTO DE CAPA DA PROPRIEDADE     */}
-        {/* ========================================== */}
+      
+        {/* Imagem Capa */}
+       
         <div className="w-full h-72 rounded-3xl overflow-hidden mb-8 relative group shadow-sm border border-slate-200">
           <img 
             src={prop.imagem} 
             alt={`Foto de ${prop.morada}`} 
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
           />
-          {/* Sombra inferior suave para o botão sobressair */}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 via-transparent to-transparent"></div>
           
-          {/* Botão flutuante para ver mais fotos */}
+          {/* Botão para ver mais fotos */}
           <button className="absolute bottom-4 right-4 flex items-center gap-2 bg-white/95 backdrop-blur-sm text-slate-800 font-bold text-sm px-4 py-2.5 rounded-xl hover:bg-white hover:scale-105 transition-all shadow-lg">
             <ImageIcon size={16} /> Ver Galeria
           </button>
         </div>
 
-        {/* CORPO DOS DETALHES (Cards de Informação) */}
+        {/* Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           
-          {/* INFO PRINCIPAL */}
+          {/* Main Info */}
           <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm space-y-6">
             <h3 className="font-bold text-slate-800 border-b border-slate-100 pb-4">Características</h3>
             
@@ -137,7 +148,7 @@ export default function Propriedades() {
             </div>
           </div>
 
-          {/* INQUILINO & CONTRATO */}
+          {/* Inquilino e Contrato */}
           <div className="md:col-span-2 bg-white rounded-3xl border border-slate-200 p-8 shadow-sm flex flex-col">
             <h3 className="font-bold text-slate-800 border-b border-slate-100 pb-4 mb-6">Estado da Ocupação</h3>
             
@@ -177,17 +188,108 @@ export default function Propriedades() {
           </div>
 
         </div>
+
+        {/* Editar */}
+        {isEditModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+            <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl">
+              <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+                <h3 className="font-bold text-lg text-slate-800">Editar Propriedade</h3>
+                <button 
+                  onClick={() => setIsEditModalOpen(false)} 
+                  className="text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-full transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              
+              <div className="p-6 space-y-5">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Morada</label>
+                  <input 
+                    type="text" 
+                    defaultValue={prop.morada} 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 focus:border-sky-500 outline-none" 
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Área (m²)</label>
+                    <input 
+                      type="number" 
+                      defaultValue={prop.area} 
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 focus:border-sky-500 outline-none" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Preço (€)</label>
+                    <input 
+                      type="number" 
+                      defaultValue={prop.preco} 
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 focus:border-sky-500 outline-none" 
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Estado Atual</label>
+                  <select 
+                    defaultValue={prop.estado}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 focus:border-sky-500 outline-none appearance-none"
+                  >
+                    <option value="Alugado">Alugado</option>
+                    <option value="Vazio">Vazio</option>
+                    <option value="Em Obras">Em Obras</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50/50">
+                <button 
+                  onClick={() => setIsEditModalOpen(false)} 
+                  className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={handleSaveEdit} 
+                  className="px-6 py-2.5 text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition-colors shadow-md shadow-sky-600/20"
+                >
+                  Guardar Alterações
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Aviso Sucesso */}
+        {showSuccessToast && (
+          <div className="fixed bottom-10 right-10 bg-emerald-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 animate-in fade-in slide-in-from-bottom-8 z-50">
+            <div className="bg-white/20 p-2 rounded-full">
+              <CheckCircle2 size={24} className="text-white" />
+            </div>
+            <div>
+              <p className="font-bold text-sm">Propriedade atualizada!</p>
+              <p className="text-xs text-emerald-100 font-medium mt-0.5">As alterações foram guardadas com sucesso.</p>
+            </div>
+            <button onClick={() => setShowSuccessToast(false)} className="ml-4 text-emerald-200 hover:text-white transition-colors">
+              <X size={18} />
+            </button>
+          </div>
+        )}
+
       </div>
     );
   }
 
-  // ==========================================
-  // VISTA 1: LISTA GERAL DE PROPRIEDADES
-  // ==========================================
+  
+  // Lista das propriedades
+
   return (
     <div className="animate-in fade-in duration-500 relative pb-10">
       
-      {/* CABEÇALHO */}
+      {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">As Minhas Propriedades</h2>
@@ -195,7 +297,7 @@ export default function Propriedades() {
         </div>
       </div>
 
-      {/* GRELHA DE CARTÕES */}
+      {/* Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {propriedadesData.map((prop) => (
           <div 
@@ -205,7 +307,7 @@ export default function Propriedades() {
           >
             <div className="flex justify-between items-start mb-6">
               
-              {/* MINIATURA DA IMAGEM NO CARTÃO */}
+              {/* Imagem Card */}
               <div className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 border border-slate-100 shadow-sm">
                 <img 
                   src={prop.imagem} 
