@@ -9,7 +9,10 @@ import {
   PenSquare,
   ImageIcon,
   X,
-  CheckCircle2
+  CheckCircle2,
+  Megaphone,
+  Euro,
+  FileText
 } from 'lucide-react';
 
 const propriedadesData = [
@@ -42,15 +45,29 @@ const propriedadesData = [
 export default function Propriedades() {
   const [propriedadeSelecionadaId, setPropriedadeSelecionadaId] = useState<number | null>(null);
   
-  // Estado
+  // Estado Editar Propriedade
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
 
-  // Submeter
+  // NOVO: Estados para o Modal de Novo Anúncio
+  const [abrirModalAnuncio, setAbrirModalAnuncio] = useState(false);
+  const [sucessoAnuncio, setSucessoAnuncio] = useState(false);
+
+  // Submeter Edição
   const handleSaveEdit = () => {
     setIsEditModalOpen(false);
     setShowSuccessToast(true);
     setTimeout(() => setShowSuccessToast(false), 3000);
+  };
+  
+  // NOVO: Submeter Novo Anúncio
+  const handleCriarAnuncio = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSucessoAnuncio(true);
+    setTimeout(() => {
+      setSucessoAnuncio(false);
+      setAbrirModalAnuncio(false);
+    }, 2000);
   };
   
   // Detalhes da propriedade
@@ -84,7 +101,6 @@ export default function Propriedades() {
             </div>
           </div>
           
-          {/* BOTÃO ATUALIZADO */}
           <button 
             onClick={() => setIsEditModalOpen(true)}
             className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-xl text-sm font-bold transition-colors shadow-sm"
@@ -180,7 +196,12 @@ export default function Propriedades() {
                 <Users size={32} className="mx-auto text-slate-300 mb-3" />
                 <p className="font-bold text-slate-600">Unidade Vazia</p>
                 <p className="text-sm text-slate-400 mb-4 max-w-sm mx-auto">Ainda não tens nenhum contrato ativo para esta propriedade.</p>
-                <button className="bg-sky-600 hover:bg-sky-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors shadow-md shadow-sky-500/20">
+                
+                {/* BOTÃO QUE ABRE O MODAL DO NOVO ANÚNCIO */}
+                <button 
+                  onClick={() => setAbrirModalAnuncio(true)}
+                  className="bg-sky-600 hover:bg-sky-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors shadow-md shadow-sky-500/20"
+                >
                   Criar Novo Anúncio
                 </button>
               </div>
@@ -259,6 +280,116 @@ export default function Propriedades() {
                   Guardar Alterações
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL: CRIAR NOVO ANÚNCIO (NOVO) */}
+        {abrirModalAnuncio && (
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+            <div className="bg-white rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col">
+              
+              {/* Header do Modal */}
+              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center shadow-inner">
+                    <Megaphone size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-800">Publicar Anúncio</h2>
+                    <p className="text-sm text-slate-500">Unidade: Apartamento Inteiro - {prop.area} m²</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setAbrirModalAnuncio(false)} 
+                  className="text-slate-400 hover:text-slate-600 p-2 rounded-full hover:bg-white border border-transparent hover:border-slate-200 transition-all"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Corpo do Formulário */}
+              {sucessoAnuncio ? (
+                <div className="p-12 text-center flex flex-col items-center justify-center animate-in zoom-in-95">
+                  <div className="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mb-4">
+                    <Megaphone size={40} className="animate-bounce" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-slate-800 mb-2">Anúncio Publicado!</h3>
+                  <p className="text-slate-500">A tua propriedade já está visível para os inquilinos.</p>
+                </div>
+              ) : (
+                <form onSubmit={handleCriarAnuncio}>
+                  <div className="p-6 space-y-5">
+                    
+                    {/* Título */}
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                        <FileText size={16} className="text-slate-400" /> Título do Anúncio
+                      </label>
+                      <input 
+                        type="text" 
+                        required
+                        defaultValue={`Fantástico apartamento em ${prop.morada}`}
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:border-sky-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-5">
+                      {/* Preço */}
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                          <Euro size={16} className="text-slate-400" /> Renda Mensal
+                        </label>
+                        <input 
+                          type="number" 
+                          required
+                          defaultValue={prop.preco}
+                          className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:border-sky-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 font-bold text-sky-700"
+                        />
+                      </div>
+
+                      {/* Fotografias (Simulação) */}
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                          <ImageIcon size={16} className="text-slate-400" /> Fotografias
+                        </label>
+                        <div className="w-full rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 px-4 py-2.5 flex items-center justify-center text-sm text-sky-600 font-semibold hover:bg-sky-50 hover:border-sky-300 transition-colors cursor-pointer">
+                          Selecionar Imagens
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Descrição */}
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-bold text-slate-700">Descrição Detalhada</label>
+                      <textarea 
+                        rows={4}
+                        required
+                        placeholder="Descreve as principais vantagens da tua casa..."
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:border-sky-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 resize-none custom-scrollbar"
+                      ></textarea>
+                    </div>
+
+                  </div>
+
+                  {/* Footer do Modal (Botões) */}
+                  <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
+                    <button 
+                      type="button"
+                      onClick={() => setAbrirModalAnuncio(false)}
+                      className="px-6 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button 
+                      type="submit"
+                      className="px-8 py-2.5 text-sm font-bold text-white bg-sky-500 hover:bg-sky-600 rounded-xl transition-all shadow-lg shadow-sky-500/30 flex items-center gap-2"
+                    >
+                      <Megaphone size={18} /> Publicar Agora
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
           </div>
         )}
