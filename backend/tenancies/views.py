@@ -13,11 +13,9 @@ class ApplicationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        # Se for Senhorio, vê candidaturas das SUAS casas
+        # Se for Senhorio, vê candidaturas das SUAS casas (usando o campo landlord)
         if user.role == 'landlord':
-            # NOTA: Se no teu models.py de 'properties' o dono se chamar 'landlord', 
-            # muda abaixo para property__landlord=user
-            return Application.objects.filter(property__owner=user) 
+            return Application.objects.filter(property__landlord=user) 
         # Se for Inquilino, vê as suas próprias
         return Application.objects.filter(tenant=user)
 
@@ -28,8 +26,8 @@ class ApplicationViewSet(viewsets.ModelViewSet):
     def approve(self, request, pk=None):
         application = self.get_object()
         
-        # Só o dono da casa pode aprovar
-        if request.user.role != 'landlord' or application.property.owner != request.user:
+        # Só o senhorio dono da casa pode aprovar
+        if request.user.role != 'landlord' or application.property.landlord != request.user:
             return Response({'error': 'Sem permissão.'}, status=status.HTTP_403_FORBIDDEN)
 
         application.status = 'approved'
@@ -41,7 +39,7 @@ class ApplicationViewSet(viewsets.ModelViewSet):
             tenant=application.tenant,
             start_date=timezone.now().date(),
             end_date=timezone.now().date() + timedelta(days=365),
-            monthly_rent=application.property.price, # Confirma se o campo é 'price'
+            monthly_rent=application.property.monthly_rent, # Corrigido para monthly_rent
             is_active=True
         )
 
@@ -53,7 +51,8 @@ class ApplicationViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def reject(self, request, pk=None):
         application = self.get_object()
-        if request.user.role != 'landlord' or application.property.owner != request.user:
+        # Só o dono da casa pode rejeitar
+        if request.user.role != 'landlord' or application.property.landlord != request.user:
             return Response({'error': 'Sem permissão.'}, status=status.HTTP_403_FORBIDDEN)
 
         application.status = 'rejected'
@@ -68,7 +67,7 @@ class TenancyViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.role == 'landlord':
-            return Tenancy.objects.filter(property__owner=user)
+            return Tenancy.objects.filter(property__landlord=user)
         return Tenancy.objects.filter(tenant=user)
 
 
@@ -79,7 +78,8 @@ class DocumentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.role == 'landlord':
-            return Document.objects.filter(tenant__applications__property__owner=user).distinct()
+            # Filtra documentos de inquilinos que se candidataram às casas deste senhorio
+            return Document.objects.filter(tenant__applications__property__landlord=user).distinct()
         return Document.objects.filter(tenant=user)
 
     def perform_create(self, serializer):
