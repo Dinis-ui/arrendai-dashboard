@@ -5,12 +5,10 @@ import { User, Mail, Phone, Shield, FileText, LogOut, ArrowLeft, X, Upload } fro
 export default function Perfil() {
   const navigate = useNavigate();
 
-  
   // ESTADOS DOS MODAIS
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isPasswordOpen, setIsPasswordOpen] = useState(false);
   const [isDocOpen, setIsDocOpen] = useState(false);
-
 
   // DADOS DO UTILIZADOR
   const user = {
@@ -37,8 +35,9 @@ export default function Perfil() {
       <header className="bg-white border-b border-gray-200 px-8 py-6 mb-8 sticky top-0 z-10 shadow-sm">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <button 
+            type="button"
             onClick={() => navigate('/portal')}
-            className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-sky-600 transition-colors bg-slate-50 px-4 py-2 rounded-xl"
+            className="relative z-50 flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-sky-600 transition-colors bg-slate-50 px-4 py-2 rounded-xl"
           >
             <ArrowLeft size={18} /> Voltar ao Portal
           </button>
@@ -66,19 +65,22 @@ export default function Perfil() {
 
             <div className="bg-white rounded-3xl border border-gray-200 p-4 shadow-sm">
               <button 
-                onClick={() => setIsEditOpen(true)} // Abre Modal Editar
+                type="button"
+                onClick={() => setIsEditOpen(true)}
                 className="w-full text-left p-4 text-sm font-bold text-slate-700 hover:bg-slate-50 rounded-2xl transition-colors"
               >
                 Editar Perfil
               </button>
               <button 
-                onClick={() => setIsPasswordOpen(true)} // Abre Modal Password
+                type="button"
+                onClick={() => setIsPasswordOpen(true)}
                 className="w-full text-left p-4 text-sm font-bold text-slate-700 hover:bg-slate-50 rounded-2xl transition-colors"
               >
                 Alterar Password
               </button>
               <div className="h-px bg-gray-100 my-2 mx-4"></div>
               <button 
+                type="button"
                 onClick={terminarSessao}
                 className="w-full flex items-center gap-3 p-4 text-sm font-bold text-red-600 hover:bg-red-50 rounded-2xl transition-colors"
               >
@@ -127,7 +129,8 @@ export default function Perfil() {
                   <FileText size={20} className="text-sky-500" /> Meus Documentos
                 </h3>
                 <button 
-                  onClick={() => setIsDocOpen(true)} // Abre Modal Adicionar Documento
+                  type="button"
+                  onClick={() => setIsDocOpen(true)}
                   className="text-xs font-bold text-sky-600 hover:text-sky-700 bg-sky-50 hover:bg-sky-100 px-4 py-2.5 rounded-full transition-colors"
                 >
                   Adicionar Novo
@@ -168,7 +171,7 @@ export default function Perfil() {
           <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
               <h3 className="font-bold text-lg text-slate-800">Editar Perfil</h3>
-              <button onClick={() => setIsEditOpen(false)} className="text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-full"><X size={18} /></button>
+              <button type="button" onClick={() => setIsEditOpen(false)} className="text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-full"><X size={18} /></button>
             </div>
             <div className="p-6 space-y-4">
               <div>
@@ -181,9 +184,8 @@ export default function Perfil() {
               </div>
             </div>
             <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
-              <button onClick={() => setIsEditOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
-              {/* BACKEND: Enviar PUT para atualizar dados do user */}
-              <button onClick={() => setIsEditOpen(false)} className="px-5 py-2.5 text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition-colors">Guardar Alterações</button>
+              <button type="button" onClick={() => setIsEditOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
+              <button type="button" onClick={() => setIsEditOpen(false)} className="px-5 py-2.5 text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition-colors">Guardar Alterações</button>
             </div>
           </div>
         </div>
@@ -196,7 +198,7 @@ export default function Perfil() {
           <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
               <h3 className="font-bold text-lg text-slate-800">Alterar Password</h3>
-              <button onClick={() => setIsPasswordOpen(false)} className="text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-full"><X size={18} /></button>
+              <button type="button" onClick={() => setIsPasswordOpen(false)} className="text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-full"><X size={18} /></button>
             </div>
             <div className="p-6 space-y-4">
               <div>
@@ -209,9 +211,8 @@ export default function Perfil() {
               </div>
             </div>
             <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
-              <button onClick={() => setIsPasswordOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
-              {/* BACKEND: Enviar POST para endpoint de change-password */}
-              <button onClick={() => setIsPasswordOpen(false)} className="px-5 py-2.5 text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition-colors">Atualizar Password</button>
+              <button type="button" onClick={() => setIsPasswordOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
+              <button type="button" onClick={() => setIsPasswordOpen(false)} className="px-5 py-2.5 text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition-colors">Atualizar Password</button>
             </div>
           </div>
         </div>
@@ -224,7 +225,7 @@ export default function Perfil() {
           <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
               <h3 className="font-bold text-lg text-slate-800">Adicionar Documento</h3>
-              <button onClick={() => setIsDocOpen(false)} className="text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-full"><X size={18} /></button>
+              <button type="button" onClick={() => setIsDocOpen(false)} className="text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-full"><X size={18} /></button>
             </div>
             <div className="p-6 space-y-5">
               <div>
@@ -246,9 +247,8 @@ export default function Perfil() {
               </div>
             </div>
             <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
-              <button onClick={() => setIsDocOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
-              {/* BACKEND: Enviar multipart/form-data com o ficheiro anexado */}
-              <button onClick={() => setIsDocOpen(false)} className="px-5 py-2.5 text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition-colors">Submeter</button>
+              <button type="button" onClick={() => setIsDocOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
+              <button type="button" onClick={() => setIsDocOpen(false)} className="px-5 py-2.5 text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition-colors">Submeter</button>
             </div>
           </div>
         </div>

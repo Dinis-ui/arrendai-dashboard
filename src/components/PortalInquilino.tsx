@@ -1,410 +1,216 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import {
-  Search,
-  MapPin,
-  Home,
-  FileText,
-  Wallet,
-  Bell,
-  ChevronDown,
-  SlidersHorizontal,
-  Heart,
-  ArrowUpRight,
-  User,
-  MessageSquare,
-  Check 
-} from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { User, Mail, Phone, LogOut, ArrowLeft, X } from 'lucide-react';
 
-// DADOS DE TESTE (MOCK DATA)
-// BACKEND: Estas listas devem vir da Base de Dados (ex: GET /api/imoveis)
-
-const menuItems = [
-  { name: 'Pesquisar', icon: Search },
-  { name: 'Minhas Candidaturas', icon: FileText },
-  { name: 'As Minhas Rendas', icon: Wallet },
-];
-
-const distritos = ['Todos', 'Lisboa', 'Porto', 'Setúbal', 'Braga', 'Coimbra', 'Faro', 'Aveiro', 'Funchal'];
-const tipologias = ['Todas', 'T0', 'T1', 'T2', 'T3', 'T4+'];
-const precos = ['Qualquer', '500€', '750€', '1.000€', '1.500€', '2.000€', '2.500€+'];
-
-const listings = [
-  { id: 1, title: 'Apartamento T2 com Varanda', location: 'Príncipe Real, Lisboa', price: 1350, area: 78, tipo: 'T2', photo: 'https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=800', tags: ['Varanda', 'Mobilado', 'Animais OK'], available: 'Disponível agora' },
-  { id: 2, title: 'Studio Moderno no Centro', location: 'Baixa, Porto', price: 820, area: 42, tipo: 'T0', photo: 'https://images.pexels.com/photos/1428348/pexels-photo-1428348.jpeg?auto=compress&cs=tinysrgb&w=800', tags: ['Wi-Fi incluído', 'Mobilado'], available: 'Disponível agora' },
-  { id: 3, title: 'Moradia T3 com Jardim', location: 'Cascais, Setúbal', price: 2100, area: 145, tipo: 'T3', photo: 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&cs=tinysrgb&w=800', tags: ['Jardim', 'Garagem', 'Piscina'], available: '1 Jun 2025' },
-  { id: 4, title: 'Apartamento T1 com Vista Rio', location: 'Ribeira, Porto', price: 980, area: 55, tipo: 'T1', photo: 'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=800', tags: ['Vista Rio', 'Mobilado'], available: 'Disponível agora' },
-  { id: 5, title: 'Loft T1 em Edifício Histórico', location: 'Alfama, Lisboa', price: 1150, area: 65, tipo: 'T1', photo: 'https://images.pexels.com/photos/439391/pexels-photo-439391.jpeg?auto=compress&cs=tinysrgb&w=800', tags: ['Pé-direito alto', 'Histórico'], available: 'Disponível agora' },
-  { id: 6, title: 'Apartamento T2 Novo', location: 'Braga, Braga', price: 890, area: 88, tipo: 'T2', photo: 'https://images.pexels.com/photos/1918291/pexels-photo-1918291.jpeg?auto=compress&cs=tinysrgb&w=800', tags: ['Novo', 'Garagem', 'Ar condicionado'], available: '15 Mai 2025' },
-];
-
-// Tipagem para os filtros do TypeScript
-type Filters = {
-  distrito: string;
-  precoMax: string;
-  tipologia: string;
-  areaMin: string;
-};
-
-
-
-// Componente para desenhar os Selects dos filtros
-function SelectFilter({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (v: string) => void; }) {
-  return (
-    <div className="relative">
-      <label className="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wide">{label}</label>
-      <div className="relative">
-        <select
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full appearance-none bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-slate-700 font-medium focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none pr-8 cursor-pointer"
-        >
-          {options.map((o) => (
-            <option key={o} value={o}>{o}</option>
-          ))}
-        </select>
-        <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-      </div>
-    </div>
-  );
+interface PerfilProps {
+  onBack: () => void;
 }
 
-// Componente que desenha o Cartão de cada Imóvel
-function PropertyCard({ listing, onApply }: { listing: typeof listings[0]; onApply: (id: number) => void }) {
-  const [saved, setSaved] = useState(false); // Estado para o botão de favoritos (Coração)
-
-  return (
-    <Link 
-      to={`/imovel/${listing.id}`}
-      className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 group flex flex-col cursor-pointer block"
-    >
-      <div className="relative overflow-hidden h-48">
-        <img src={listing.photo} alt={listing.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-        <div className="absolute top-3 left-3">
-          <span className="bg-white/90 backdrop-blur-sm text-slate-700 text-xs font-semibold px-2.5 py-1 rounded-full">{listing.tipo}</span>
-        </div>
-        <button
-          onClick={(e) => {
-            e.preventDefault(); // Impede que o clique no coração mude a página
-            setSaved(!saved); // BACKEND: Isto precisará de um POST para guardar nos Favoritos da DB
-          }}
-          className="absolute top-3 right-3 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors"
-        >
-          <Heart size={15} className={saved ? 'fill-rose-500 text-rose-500' : 'text-slate-400'} />
-        </button>
-        <div className="absolute bottom-3 left-3">
-          <span className="bg-emerald-500 text-white text-xs font-semibold px-2.5 py-1 rounded-full">{listing.available}</span>
-        </div>
-      </div>
-
-      <div className="p-5 flex flex-col flex-1">
-        <div className="mb-3">
-          <h3 className="font-bold text-slate-800 text-base leading-snug mb-1">{listing.title}</h3>
-          <div className="flex items-center gap-1 text-slate-500 text-sm">
-            <MapPin size={13} /> <span>{listing.location}</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 text-xs text-slate-500 mb-4">
-          <span className="flex items-center gap-1"><Home size={12} />{listing.area} m²</span>
-          <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-          {listing.tags.slice(0, 2).map((tag) => (
-            <span key={tag} className="bg-sky-50 text-sky-700 px-2 py-0.5 rounded-full font-medium">{tag}</span>
-          ))}
-        </div>
-
-        <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-100">
-          <div>
-            <span className="text-2xl font-bold text-slate-900">{listing.price.toLocaleString('pt-PT')}€</span>
-            <span className="text-slate-400 text-sm">/mês</span>
-          </div>
-          <button
-            onClick={(e) => {
-              e.preventDefault(); // Impede que o botão de candidatar mude a página
-              onApply(listing.id);
-            }}
-            className="flex items-center gap-1.5 bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm"
-          >
-            Candidatar-me <ArrowUpRight size={14} />
-          </button>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-
-export default function PortalInquilino() {
+export default function PerfilInquilino({ onBack }: PerfilProps) {
   const navigate = useNavigate();
-  
-  // GESTÃO DE ESTADOS (Navegação e Filtros)
-  const [activeTab, setActiveTab] = useState('Pesquisar');
-  const [search, setSearch] = useState('');
-  const [filters, setFilters] = useState<Filters>({
-    distrito: 'Todos',
-    precoMax: 'Qualquer',
-    tipologia: 'Todas',
-    areaMin: '',
-  });
-  
-  // Array que guarda os IDs dos imóveis a que o utilizador já se candidatou
-  // BACKEND: Ao fazer login, devemos carregar as candidaturas do utilizador da BD para este estado
-  const [appliedIds, setAppliedIds] = useState<number[]>([]);
 
-  // GESTÃO DE ESTADOS (Notificações)
-  const [showNotifications, setShowNotifications] = useState(false);
-  // BACKEND: As notificações devem vir via WebSockets ou GET request periódico
-  const [notificacoes, setNotificacoes] = useState([
-    { id: 1, titulo: 'Candidatura Aprovada!', desc: 'O senhorio aceitou a tua candidatura para o T2 no Príncipe Real.', tempo: 'Há 10 min', lida: false },
-    { id: 2, titulo: 'Nova Mensagem', desc: 'João Silva enviou-te uma mensagem sobre o contrato.', tempo: 'Há 1 hora', lida: false },
-    { id: 3, titulo: 'Alerta de Pesquisa', desc: 'Há 3 novos imóveis em Lisboa que correspondem aos teus favoritos.', tempo: 'Há 1 dia', lida: true },
-  ]);
+  // ESTADOS DOS MODAIS
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isPasswordOpen, setIsPasswordOpen] = useState(false);
 
-  const naoLidas = notificacoes.filter(n => !n.lida).length;
+  // ESTADO DO UTILIZADOR REAL (Vindo da API)
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Função disparada quando se clica em "Candidatar-me" num anúncio
-  const handleApply = (id: number) => {
-    // Adiciona o ID do imóvel à lista de candidaturas (evitando duplicados)
-    // BACKEND: Fazer aqui o POST request para submeter a candidatura real
-    setAppliedIds((prev) => prev.includes(id) ? prev : [...prev, id]);
+  // DADOS DE TESTE PARA DESIGN
+  const telefoneTemporario = '+351 912 345 678'; 
+
+  // LÓGICA PARA CARREGAR OS DADOS DO BACKEND
+  useEffect(() => {
+    const carregarPerfil = async () => {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+      try {
+        const res = await fetch('http://127.0.0.1:8000/api/users/me/', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const dados = await res.json();
+          setUser(dados);
+        } else {
+          terminarSessao();
+        }
+      } catch (e) {
+        console.error("Erro ao carregar perfil:", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    carregarPerfil();
+  }, [navigate]);
+
+  const terminarSessao = () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    navigate('/login');
   };
 
-  // Função auxiliar para atualizar o estado dos filtros
-  const setFilter = (key: keyof Filters) => (value: string) =>
-    setFilters((prev) => ({ ...prev, [key]: value }));
-
-  // LÓGICA DE FILTRAGEM (Feita no frontend nesta fase)
-  // BACKEND: Se a base de dados crescer muito, esta filtragem deve ser feita no backend (passando query params no fetch)
-  const filtered = listings.filter((l) => {
-    const matchSearch = search === '' || l.title.toLowerCase().includes(search.toLowerCase()) || l.location.toLowerCase().includes(search.toLowerCase());
-    const matchDistrito = filters.distrito === 'Todos' || l.location.includes(filters.distrito);
-    const matchTipo = filters.tipologia === 'Todas' || l.tipo === filters.tipologia;
-    const matchPreco = filters.precoMax === 'Qualquer' || l.price <= parseInt(filters.precoMax.replace(/[^0-9]/g, ''), 10);
-    const matchArea = filters.areaMin === '' || l.area >= parseInt(filters.areaMin, 10);
-    return matchSearch && matchDistrito && matchTipo && matchPreco && matchArea;
-  });
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center text-slate-500">A carregar o teu perfil...</div>;
+  }
 
   return (
-    <div className="flex h-screen bg-gray-50 font-sans text-slate-900">
-
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-16 animate-in fade-in duration-500 relative">
       
-      <aside className="w-64 bg-slate-900 text-white flex flex-col">
-        {/* LOGO */}
-        <div className="p-6 flex items-center gap-3">
-          <div className="w-8 h-8 bg-sky-500 rounded-lg flex items-center justify-center">
-            <span className="font-bold text-xl">A</span>
-          </div>
-          <span className="text-xl font-bold tracking-tight">ArrendAI</span>
-        </div>
-
-        {/* MENU */}
-        <nav className="flex-1 px-4 mt-4">
-          {menuItems.map((item) => (
-            <button
-              key={item.name}
-              onClick={() => setActiveTab(item.name)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-1 ${
-                activeTab === item.name
-                  ? 'bg-sky-600 text-white'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <item.icon size={20} />
-              <span className="font-medium text-sm">{item.name}</span>
-            </button>
-          ))}
-          <Link to="/mensagens" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-slate-400 hover:bg-slate-800 hover:text-white mt-1">
-            <MessageSquare size={20} />
-            <span className="font-medium text-sm">Mensagens</span>
-          </Link>
-        </nav>
-
-        {/* RODAPÉ DO MENU (Perfil) */}
-        <div className="p-4 border-t border-slate-800">
-          <div 
-            onClick={() => navigate('/perfil')} // Navega para a página de perfil
-            className="flex items-center gap-3 px-2 py-2 cursor-pointer hover:bg-slate-800 rounded-lg transition-colors"
+      {/* HEADER */}
+      <header className="bg-white border-b border-gray-200 px-8 py-6 mb-8 sticky top-0 z-10 shadow-sm">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
+          <button 
+            onClick={onBack}
+            className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-sky-600 transition-colors bg-slate-50 px-4 py-2 rounded-xl"
           >
-            <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold">MF</div>
-            <div>
-              <p className="text-sm font-medium text-white">Maria Ferreira</p>
-              <p className="text-xs text-slate-400">Inquilina</p>
-            </div>
+            <ArrowLeft size={18} /> Voltar ao Portal
+          </button>
+          <div className="flex items-center gap-2">
+            <h1 className="font-bold text-slate-800 tracking-tight">Definições de Conta</h1>
           </div>
         </div>
-      </aside>
+      </header>
 
-     
-      <main className="flex-1 flex flex-col overflow-hidden">
-
-        {/* HEADER (Topo) */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 flex-shrink-0 relative z-20">
-          <div>
-            <h1 className="text-lg font-bold text-slate-800">Portal do Inquilino</h1>
-            <p className="text-xs text-slate-400">Encontra o teu próximo lar</p>
-          </div>
+      <main className="max-w-5xl mx-auto px-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
           
-          <div className="flex items-center gap-3">
-            {/* COMPONENTE DE NOTIFICAÇÕES */}
-            <div className="relative">
-              <button 
-                onClick={() => setShowNotifications(!showNotifications)}
-                className={`p-2 rounded-full relative transition-colors ${showNotifications ? 'bg-sky-50 text-sky-600' : 'text-gray-500 hover:bg-gray-100'}`}
-              >
-                <Bell size={20} />
-                {naoLidas > 0 && (
-                  <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
-                )}
-              </button>
-
-              {/* DROPDOWN DE NOTIFICAÇÕES */}
-              {showNotifications && (
-                <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-top-2 z-50">
-                  <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                    <h3 className="font-bold text-slate-800">Notificações</h3>
-                    {naoLidas > 0 && (
-                      <button 
-                        onClick={() => setNotificacoes(notificacoes.map(n => ({ ...n, lida: true })))}
-                        className="text-xs font-bold text-sky-600 hover:text-sky-700 flex items-center gap-1 transition-colors"
-                      >
-                        <Check size={12} /> Marcar como lidas
-                      </button>
-                    )}
-                  </div>
-                  <div className="max-h-[350px] overflow-y-auto">
-                    {notificacoes.length === 0 ? (
-                      <div className="p-6 text-center text-slate-500 text-sm">Não tens notificações.</div>
-                    ) : (
-                      notificacoes.map(notif => (
-                        <div key={notif.id} className={`p-4 border-b border-slate-50 cursor-pointer transition-colors hover:bg-slate-50 ${notif.lida ? 'opacity-60' : 'bg-sky-50/20'}`}>
-                          <p className={`text-sm font-bold ${notif.lida ? 'text-slate-700' : 'text-slate-900'}`}>{notif.titulo}</p>
-                          <p className="text-xs text-slate-600 mt-1 line-clamp-2">{notif.desc}</p>
-                          <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-wider">{notif.tempo}</p>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                  <div className="p-3 text-center border-t border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors">
-                    <span className="text-xs font-bold text-slate-500">Ver todo o histórico</span>
-                  </div>
-                </div>
-              )}
+          {/* AVATAR E AÇÕES */}
+          <div className="space-y-6">
+            <div className="bg-white rounded-3xl border border-gray-200 p-8 shadow-sm text-center">
+              <div className="w-28 h-28 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700 font-bold text-4xl mx-auto mb-6 border-4 border-white shadow-md uppercase">
+                {user?.username ? user?.username.charAt(0) : '?'}
+              </div>
+              <h2 className="text-2xl font-bold text-slate-900">{user?.username}</h2>
+              <p className="text-slate-500 font-medium text-sm mb-6">Inquilino</p>
             </div>
 
-            <div className="w-9 h-9 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold text-sm">
-              <User size={18} />
+            <div className="bg-white rounded-3xl border border-gray-200 p-4 shadow-sm">
+              <button 
+                onClick={() => setIsEditOpen(true)}
+                className="w-full text-left p-4 text-sm font-bold text-slate-700 hover:bg-slate-50 rounded-2xl transition-colors"
+              >
+                Editar Perfil
+              </button>
+              <button 
+                onClick={() => setIsPasswordOpen(true)}
+                className="w-full text-left p-4 text-sm font-bold text-slate-700 hover:bg-slate-50 rounded-2xl transition-colors"
+              >
+                Alterar Password
+              </button>
+              <div className="h-px bg-gray-100 my-2 mx-4"></div>
+              <button 
+                onClick={terminarSessao}
+                className="w-full flex items-center gap-3 p-4 text-sm font-bold text-red-600 hover:bg-red-50 rounded-2xl transition-colors"
+              >
+                <LogOut size={18} /> Terminar Sessão
+              </button>
             </div>
           </div>
-        </header>
 
-        {/* ÁREA DE CONTEÚDO DINÂMICO */}
-        <div className="flex-1 overflow-y-auto">
+          {/* INFORMAÇÕES PESSOAIS */}
+          <div className="md:col-span-2 space-y-8">
+            
+            <div className="bg-white rounded-3xl border border-gray-200 p-10 shadow-sm">
+              <h3 className="text-xl font-bold text-slate-900 mb-8 flex items-center gap-2">
+                <User size={20} className="text-emerald-500" /> Informação Pessoal
+              </h3>
+              
+              <div className="grid grid-cols-1 gap-8">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Nome de Utilizador</label>
+                  <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-4">
+                    <User size={18} className="text-slate-400" />
+                    <span className="text-sm font-bold text-slate-800">{user?.username}</span>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Email</label>
+                  <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-4">
+                    <Mail size={18} className="text-slate-400" />
+                    <span className="text-sm font-bold text-slate-800">{user?.email || 'Sem email registado'}</span>
+                  </div>
+                </div>
 
-          {/* ABA PESQUISAR */}
-          {activeTab === 'Pesquisar' && (
-            <div className="p-8">
-              {/* ZONA DE FILTROS */}
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-8">
-                <div className="flex items-center gap-3 mb-5">
-                  <SlidersHorizontal size={18} className="text-sky-600" />
-                  <h2 className="font-bold text-slate-800">Pesquisa de Imóveis</h2>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Telefone de Contacto</label>
+                  <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-4">
+                    <Phone size={18} className="text-slate-400" />
+                    <span className="text-sm font-bold text-slate-800">{telefoneTemporario}</span>
+                  </div>
                 </div>
-                <div className="relative mb-5">
-                  <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Pesquisa por localização ou tipo de imóvel..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all"
-                  />
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <SelectFilter label="Distrito" value={filters.distrito} options={distritos} onChange={setFilter('distrito')} />
-                  <SelectFilter label="Preço Máximo" value={filters.precoMax} options={precos} onChange={setFilter('precoMax')} />
-                  <SelectFilter label="Tipologia" value={filters.tipologia} options={tipologias} onChange={setFilter('tipologia')} />
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wide">Área Mín. (m²)</label>
-                    <input
-                      type="number"
-                      placeholder="ex: 50"
-                      value={filters.areaMin}
-                      onChange={(e) => setFilter('areaMin')(e.target.value)}
-                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-slate-700 font-medium focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none"
-                    />
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">NIF</label>
+                  <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-4">
+                    <span className="font-bold text-slate-400 text-sm">NIF</span>
+                    <span className="text-sm font-bold text-slate-800">{user?.nif || 'Não fornecido'}</span>
                   </div>
                 </div>
               </div>
-
-              {/* LISTAGEM DE IMÓVEIS (Grelha) */}
-              <div className="flex items-center justify-between mb-5">
-                <p className="text-slate-600 text-sm font-medium"><span className="font-bold text-slate-900">{filtered.length}</span> imóveis encontrados</p>
-                <span className="text-xs text-slate-400">Ordenado por: Relevância</span>
-              </div>
-
-              {filtered.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {filtered.map((listing) => (
-                    <PropertyCard key={listing.id} listing={listing} onApply={handleApply} />
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-24 text-center">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4"><Home size={28} className="text-gray-400" /></div>
-                  <p className="text-slate-700 font-semibold mb-1">Nenhum imóvel encontrado</p>
-                  <p className="text-slate-400 text-sm">Tenta ajustar os filtros de pesquisa.</p>
-                </div>
-              )}
             </div>
-          )}
 
-          {/* ABA MINHAS CANDIDATURAS */}
-          {activeTab === 'Minhas Candidaturas' && (
-            <div className="p-8">
-              <h2 className="text-xl font-bold text-slate-800 mb-6">Minhas Candidaturas</h2>
-              {/* Filtra a lista principal para mostrar apenas os imóveis onde o ID está em 'appliedIds' */}
-              {appliedIds.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-24 text-center">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4"><FileText size={28} className="text-gray-400" /></div>
-                  <p className="text-slate-700 font-semibold mb-1">Sem candidaturas ainda</p>
-                  <p className="text-slate-400 text-sm">Candidata-te a imóveis na secção de Pesquisa.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {listings.filter((l) => appliedIds.includes(l.id)).map((l) => (
-                    <div key={l.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex items-center gap-5">
-                      <img src={l.photo} alt={l.title} className="w-20 h-16 rounded-lg object-cover flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-slate-800 truncate">{l.title}</p>
-                        <p className="text-sm text-slate-500 flex items-center gap-1 mt-0.5"><MapPin size={12} />{l.location}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-slate-800">{l.price.toLocaleString('pt-PT')}€<span className="text-slate-400 font-normal text-sm">/mês</span></p>
-                        {/* BACKEND: O estado "Em análise" deve ser dinâmico consoante o status na DB */}
-                        <span className="text-xs font-semibold text-amber-700 bg-amber-100 px-2.5 py-1 rounded-full mt-1 inline-block">Em análise</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ABA AS MINHAS RENDAS */}
-          {activeTab === 'As Minhas Rendas' && (
-            <div className="p-8">
-              <h2 className="text-xl font-bold text-slate-800 mb-6">As Minhas Rendas</h2>
-              {/* BACKEND: Apresentar histórico de faturas/pagamentos do inquilino aqui */}
-              <div className="flex flex-col items-center justify-center py-24 text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4"><Wallet size={28} className="text-gray-400" /></div>
-                <p className="text-slate-700 font-semibold mb-1">Sem contrato ativo</p>
-                <p className="text-slate-400 text-sm">Quando tiveres um arrendamento ativo, as rendas aparecerão aqui.</p>
-              </div>
-            </div>
-          )}
-
+          </div>
         </div>
       </main>
+
+      
+      {/* MODAL EDITAR PERFIL */}
+      {isEditOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="font-bold text-lg text-slate-800">Editar Perfil</h3>
+              <button onClick={() => setIsEditOpen(false)} className="text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-full"><X size={18} /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Nome de Utilizador</label>
+                <input type="text" defaultValue={user?.username} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-emerald-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Telefone de Contacto</label>
+                <input type="text" defaultValue={telefoneTemporario} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-emerald-500 outline-none" />
+              </div>
+            </div>
+            <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+              <button onClick={() => setIsEditOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
+              <button onClick={() => setIsEditOpen(false)} className="px-5 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors">Guardar Alterações</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ALTERAR PASSWORD */}
+      {isPasswordOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="font-bold text-lg text-slate-800">Alterar Password</h3>
+              <button onClick={() => setIsPasswordOpen(false)} className="text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-full"><X size={18} /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Password Atual</label>
+                <input type="password" placeholder="••••••••" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-emerald-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Nova Password</label>
+                <input type="password" placeholder="••••••••" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-emerald-500 outline-none" />
+              </div>
+            </div>
+            <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+              <button onClick={() => setIsPasswordOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
+              <button onClick={() => setIsPasswordOpen(false)} className="px-5 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors">Atualizar Password</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

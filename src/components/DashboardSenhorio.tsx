@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Building2, Megaphone, Users, Wallet, MessageSquare, Search, Bell, Check } from 'lucide-react';
 
 // IMPORTAÇÃO DOS COMPONENTES
@@ -19,7 +19,27 @@ const menuItems = [
 
 export default function DashboardSenhorio() {
   const [activeTab, setActiveTab] = useState('Anúncios');
+  const [user, setUser] = useState<any>(null); // Estado para guardar os dados reais
   
+  // Lógica para carregar os dados do utilizador autenticado
+  useEffect(() => {
+    const carregarDados = async () => {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      try {
+        const res = await fetch('http://127.0.0.1:8000/api/users/me/', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const dados = await res.json();
+          setUser(dados);
+        }
+      } catch (e) { console.error("Erro ao carregar utilizador:", e); }
+    };
+    carregarDados();
+  }, []);
+
   // NOTIFICAÇÕES
   const [showNotifications, setShowNotifications] = useState(false);
   const [notificacoes, setNotificacoes] = useState([
@@ -30,7 +50,6 @@ export default function DashboardSenhorio() {
 
   const naoLidas = notificacoes.filter(n => !n.lida).length;
 
-  // LÓGICA DE ECRÃ INTEIRO PARA O PERFIL
   if (activeTab === 'Perfil') {
     return <PerfilSenhorio onBack={() => setActiveTab('Anúncios')} />;
   }
@@ -73,97 +92,44 @@ export default function DashboardSenhorio() {
           ))}
         </nav>
 
-        {/* PERFIL */}
+        {/* PERFIL DINÂMICO */}
         <div className="p-4 border-t border-slate-800">
           <div 
             onClick={() => setActiveTab('Perfil')}
             className="flex items-center gap-3 px-2 py-2 cursor-pointer hover:bg-slate-800 rounded-lg transition-colors"
           >
-            <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold">
-              JS
+            <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold uppercase">
+              {user ? user?.username.charAt(0) : '?'}
             </div>
             <div>
-              <p className="text-sm font-medium text-white">João Silva</p>
-              <p className="text-xs text-slate-400">Senhorio Pro</p>
+              <p className="text-sm font-medium text-white truncate w-32">
+                {user ? user?.username : 'A carregar...'}
+              </p>
+              <p className="text-xs text-slate-400">
+                {user?.role === 'landlord' ? 'Senhorio' : 'Inquilino'}
+              </p>
             </div>
           </div>
         </div>
-       
-
       </aside>
 
       {/* MAIN CONTENT */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        
-        {/* HEADER */}
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 flex-shrink-0 relative z-20">
           <div className="relative w-96">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input 
-              type="text" 
-              placeholder="Pesquisar propriedades, inquilinos..." 
-              className="w-full pl-11 pr-4 py-2 bg-slate-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:bg-white outline-none transition-all" 
-            />
+            <input type="text" placeholder="Pesquisar propriedades, inquilinos..." className="w-full pl-11 pr-4 py-2 bg-slate-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:bg-white outline-none transition-all" />
           </div>
           
-          {/* NOTIFICAÇÕES */}
-          <div className="relative">
-            <button 
-              onClick={() => setShowNotifications(!showNotifications)}
-              className={`p-2 rounded-full relative transition-colors ${showNotifications ? 'bg-sky-50 text-sky-600' : 'text-gray-500 hover:bg-gray-100'}`}
-            >
-              <Bell size={20} />
-              {naoLidas > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
-              )}
-            </button>
-
-            {/* CAIXA DE DROPDOWN */}
-            {showNotifications && (
-              <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-top-2 z-50">
-                
-                <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                  <h3 className="font-bold text-slate-800">Notificações</h3>
-                  {naoLidas > 0 && (
-                    <button 
-                      onClick={() => setNotificacoes(notificacoes.map(n => ({ ...n, lida: true })))}
-                      className="text-xs font-bold text-sky-600 hover:text-sky-700 flex items-center gap-1 transition-colors"
-                    >
-                      <Check size={12} /> Marcar como lidas
-                    </button>
-                  )}
-                </div>
-
-                <div className="max-h-[350px] overflow-y-auto">
-                  {notificacoes.length === 0 ? (
-                    <div className="p-6 text-center text-slate-500 text-sm">Não tens notificações.</div>
-                  ) : (
-                    notificacoes.map(notif => (
-                      <div 
-                        key={notif.id} 
-                        className={`p-4 border-b border-slate-50 cursor-pointer transition-colors hover:bg-slate-50 ${notif.lida ? 'opacity-60' : 'bg-sky-50/20'}`}
-                      >
-                        <p className={`text-sm font-bold ${notif.lida ? 'text-slate-700' : 'text-slate-900'}`}>{notif.titulo}</p>
-                        <p className="text-xs text-slate-600 mt-1 line-clamp-2">{notif.desc}</p>
-                        <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-wider">{notif.tempo}</p>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                <div className="p-3 text-center border-t border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors">
-                  <span className="text-xs font-bold text-slate-500">Ver todo o histórico</span>
-                </div>
-
-              </div>
-            )}
-          </div>
+          <button onClick={() => setShowNotifications(!showNotifications)} className={`p-2 rounded-full relative transition-colors ${showNotifications ? 'bg-sky-50 text-sky-600' : 'text-gray-500 hover:bg-gray-100'}`}>
+            <Bell size={20} />
+            {naoLidas > 0 && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
+          </button>
         </header>
 
         <div className="flex-1 overflow-y-auto p-8 bg-slate-50">
           {renderContent()}
         </div>
-        
       </main>
     </div>
   );

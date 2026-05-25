@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Mail, Phone, Shield, FileText, LogOut, ArrowLeft, X, Upload, CreditCard } from 'lucide-react';
-
 
 interface PerfilProps {
   onBack: () => void;
@@ -16,25 +15,55 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
   const [isBillingOpen, setIsBillingOpen] = useState(false);
   const [isDocOpen, setIsDocOpen] = useState(false);
 
+  // ESTADO DO UTILIZADOR REAL (Vindo da API)
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  // DADOS DO UTILIZADOR
-  const user = {
-    nome: 'João Silva',
-    email: 'joao.silva@arrendai.com',
-    telefone: '+351 912 345 678',
-    tipo: 'Senhorio Pro',
-    documentos: [
-      { nome: 'Cartão de Cidadão', estado: 'Verificado', cor: 'text-green-600 bg-green-50 border-green-100' },
-      { nome: 'Registo Predial', estado: 'Verificado', cor: 'text-green-600 bg-green-50 border-green-100' },
-      { nome: 'Certificado Energético', estado: 'Pendente', cor: 'text-amber-600 bg-amber-50 border-amber-100' },
-    ]
-  };
+  // DADOS DE TESTE PARA DESIGN (Enquanto não vêm da Base de Dados)
+  const telefoneTemporario = '+351 912 345 678'; // O teu modelo Django ainda não tem campo de telefone
+  const documentosTeste = [
+    { nome: 'Cartão de Cidadão', estado: 'Verificado', cor: 'text-green-600 bg-green-50 border-green-100' },
+    { nome: 'Registo Predial', estado: 'Verificado', cor: 'text-green-600 bg-green-50 border-green-100' },
+    { nome: 'Certificado Energético', estado: 'Pendente', cor: 'text-amber-600 bg-amber-50 border-amber-100' },
+  ];
+
+  // LÓGICA PARA CARREGAR OS DADOS DO BACKEND
+  useEffect(() => {
+    const carregarPerfil = async () => {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+      try {
+        const res = await fetch('http://127.0.0.1:8000/api/users/me/', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const dados = await res.json();
+          setUser(dados);
+        } else {
+          // Token expirou ou inválido
+          terminarSessao();
+        }
+      } catch (e) {
+        console.error("Erro ao carregar perfil:", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    carregarPerfil();
+  }, [navigate]);
 
   const terminarSessao = () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     navigate('/login');
   };
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center text-slate-500">A carregar o teu perfil...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-16 animate-in fade-in duration-500 relative">
@@ -60,11 +89,11 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
           {/* AVATAR E AÇÕES */}
           <div className="space-y-6">
             <div className="bg-white rounded-3xl border border-gray-200 p-8 shadow-sm text-center">
-              <div className="w-28 h-28 bg-sky-100 rounded-full flex items-center justify-center text-sky-700 font-bold text-4xl mx-auto mb-6 border-4 border-white shadow-md">
-                JS
+              <div className="w-28 h-28 bg-sky-100 rounded-full flex items-center justify-center text-sky-700 font-bold text-4xl mx-auto mb-6 border-4 border-white shadow-md uppercase">
+                {user?.username ? user?.username.charAt(0) : '?'}
               </div>
-              <h2 className="text-2xl font-bold text-slate-900">{user.nome}</h2>
-              <p className="text-slate-500 font-medium text-sm mb-6">{user.tipo}</p>
+              <h2 className="text-2xl font-bold text-slate-900">{user?.username}</h2>
+              <p className="text-slate-500 font-medium text-sm mb-6">Senhorio</p>
               <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-1.5 rounded-full text-xs font-bold border border-emerald-100">
                 <Shield size={14} /> Proprietário Verificado
               </div>
@@ -84,7 +113,7 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
                 Alterar Password
               </button>
               <button 
-                onClick={() => setIsBillingOpen(true)} // Modal Extra Senhorio
+                onClick={() => setIsBillingOpen(true)} 
                 className="w-full text-left p-4 text-sm font-bold text-slate-700 hover:bg-slate-50 rounded-2xl transition-colors"
               >
                 Dados de Faturação
@@ -109,10 +138,10 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
               
               <div className="grid grid-cols-1 gap-8">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Nome Completo</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Nome de Utilizador</label>
                   <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-4">
                     <User size={18} className="text-slate-400" />
-                    <span className="text-sm font-bold text-slate-800">{user.nome}</span>
+                    <span className="text-sm font-bold text-slate-800">{user?.username}</span>
                   </div>
                 </div>
                 
@@ -120,7 +149,7 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Email Profissional</label>
                   <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-4">
                     <Mail size={18} className="text-slate-400" />
-                    <span className="text-sm font-bold text-slate-800">{user.email}</span>
+                    <span className="text-sm font-bold text-slate-800">{user?.email || 'Sem email registado'}</span>
                   </div>
                 </div>
 
@@ -128,7 +157,7 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Telefone de Contacto</label>
                   <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-4">
                     <Phone size={18} className="text-slate-400" />
-                    <span className="text-sm font-bold text-slate-800">{user.telefone}</span>
+                    <span className="text-sm font-bold text-slate-800">{telefoneTemporario}</span>
                   </div>
                 </div>
               </div>
@@ -148,7 +177,7 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
               </div>
               
               <div className="space-y-4">
-                {user.documentos.map((doc, index) => (
+                {documentosTeste.map((doc, index) => (
                   <div key={index} className="flex items-center justify-between p-5 border border-slate-100 rounded-2xl hover:border-slate-200 transition-colors bg-slate-50/50">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-slate-400 border border-slate-100 shadow-sm">
@@ -185,24 +214,22 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Nome Completo</label>
-                <input type="text" defaultValue={user.nome} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-sky-500 outline-none" />
+                <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Nome de Utilizador</label>
+                <input type="text" defaultValue={user?.username} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-sky-500 outline-none" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Telefone de Contacto</label>
-                <input type="text" defaultValue={user.telefone} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-sky-500 outline-none" />
+                <input type="text" defaultValue={telefoneTemporario} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-sky-500 outline-none" />
               </div>
             </div>
             <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
               <button onClick={() => setIsEditOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
-              {/* BACKEND: Enviar PUT para atualizar dados do senhorio */}
               <button onClick={() => setIsEditOpen(false)} className="px-5 py-2.5 text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition-colors">Guardar Alterações</button>
             </div>
           </div>
         </div>
       )}
 
-     
       {/* MODAL ALTERAR PASSWORD */}
       {isPasswordOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
@@ -229,8 +256,7 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
         </div>
       )}
 
-      
-      {/* MODAL DADOS DE FATURAÇÃO (Exclusivo Senhorio) */}
+      {/* MODAL DADOS DE FATURAÇÃO */}
       {isBillingOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
@@ -241,7 +267,7 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">NIF (Número de Identificação Fiscal)</label>
-                <input type="text" placeholder="Ex: 212 345 678" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-sky-500 outline-none" />
+                <input type="text" defaultValue={user?.nif || ''} placeholder="Ex: 212 345 678" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-sky-500 outline-none" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">IBAN (Para receber rendas)</label>
@@ -254,14 +280,12 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
             </div>
             <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
               <button onClick={() => setIsBillingOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
-              {/* BACKEND: Enviar PUT para atualizar dados de pagamento do senhorio */}
               <button onClick={() => setIsBillingOpen(false)} className="px-5 py-2.5 text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition-colors">Guardar Dados</button>
             </div>
           </div>
         </div>
       )}
 
-      
       {/* MODAL ADICIONAR DOCUMENTO */}
       {isDocOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
@@ -291,13 +315,11 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
             </div>
             <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
               <button onClick={() => setIsDocOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
-              {/* BACKEND: Upload de documento associado ao imóvel/senhorio */}
               <button onClick={() => setIsDocOpen(false)} className="px-5 py-2.5 text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition-colors">Submeter Verificação</button>
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }

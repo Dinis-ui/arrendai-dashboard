@@ -5,17 +5,15 @@ import { User, Mail, Lock, ShieldCheck, ArrowLeft, UserCircle, UploadCloud } fro
 export default function Registo() {
   const navigate = useNavigate();
   
-
   const [formData, setFormData] = useState({
     nome: '',
     username: '',
     email: '',
     password: '',
     confirmPassword: '',
-    userType: 'inquilino',
+    userType: 'tenant', // O Django espera 'tenant' ou 'landlord'
     nif: '' 
   });
-  
   
   const [documento, setDocumento] = useState<File | null>(null);
   
@@ -47,28 +45,33 @@ export default function Registo() {
     }
 
     // Validação do Documento para Senhorios
-    if (formData.userType === 'senhorio' && !documento) {
+    if (formData.userType === 'landlord' && !documento) {
       setMensagem('É obrigatório enviar um documento de identificação para ser Senhorio.');
       setLoading(false);
       return;
     }
 
     try {
-      const payload = {
-        nome: formData.nome,
-        username: formData.username,
-        email: formData.email,
-        password: formData.password,
-        user_type: formData.userType,
-        nif: formData.nif 
-      };
+      // Criação do FormData para conseguirmos enviar PDFs e Imagens!
+      const formDataToSend = new FormData();
+      formDataToSend.append('nome', formData.nome);
+      formDataToSend.append('username', formData.username);
+      formDataToSend.append('email', formData.email);
+      formDataToSend.append('password', formData.password);
+      formDataToSend.append('role', formData.userType); // Vai enviar 'tenant' ou 'landlord'
+      formDataToSend.append('nif', formData.nif);
 
+      // Se for senhorio, anexa o documento!
+      if (formData.userType === 'landlord' && documento) {
+        formDataToSend.append('documento', documento);
+      }
+
+      // Link atualizado para funcionar no teu computador local!
       const resposta = await fetch('http://127.0.0.1:8000/api/users/register/', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
+        // ATENÇÃO: NÃO colocar o cabeçalho 'Content-Type' aqui. 
+        // O navegador faz isso automaticamente quando enviamos um FormData.
+        body: formDataToSend,
       });
 
       if (resposta.ok) {
@@ -138,7 +141,6 @@ export default function Registo() {
               </div>
             </div>
 
-            {/* EMAIL */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                 <Mail size={16} className="text-slate-400" /> Email
@@ -153,7 +155,6 @@ export default function Registo() {
               />
             </div>
 
-            {/* NIF */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                 <ShieldCheck size={16} className="text-slate-400" /> NIF (Número de Contribuinte)
@@ -170,27 +171,25 @@ export default function Registo() {
               />
             </div>
 
-            {/* ESCOLHA DE TIPO DE UTILIZADOR */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                 <ShieldCheck size={16} className="text-slate-400" /> Pretendes:
               </label>
               <div className="grid grid-cols-2 gap-4">
-                <label className={`cursor-pointer rounded-xl border p-4 text-center transition-all ${formData.userType === 'inquilino' ? 'border-sky-500 bg-sky-50 text-sky-700' : 'border-gray-100 bg-slate-50 text-slate-500'}`}>
-                  <input type="radio" name="userType" value="inquilino" className="hidden" onChange={handleInputChange} />
+                <label className={`cursor-pointer rounded-xl border p-4 text-center transition-all ${formData.userType === 'tenant' ? 'border-sky-500 bg-sky-50 text-sky-700' : 'border-gray-100 bg-slate-50 text-slate-500'}`}>
+                  <input type="radio" name="userType" value="tenant" className="hidden" onChange={handleInputChange} />
                   <p className="text-sm font-bold">Arrendar Casa</p>
                   <p className="text-xs opacity-70 italic">Inquilino</p>
                 </label>
-                <label className={`cursor-pointer rounded-xl border p-4 text-center transition-all ${formData.userType === 'senhorio' ? 'border-sky-500 bg-sky-50 text-sky-700' : 'border-gray-100 bg-slate-50 text-slate-500'}`}>
-                  <input type="radio" name="userType" value="senhorio" className="hidden" onChange={handleInputChange} />
+                <label className={`cursor-pointer rounded-xl border p-4 text-center transition-all ${formData.userType === 'landlord' ? 'border-sky-500 bg-sky-50 text-sky-700' : 'border-gray-100 bg-slate-50 text-slate-500'}`}>
+                  <input type="radio" name="userType" value="landlord" className="hidden" onChange={handleInputChange} />
                   <p className="text-sm font-bold">Publicar Casas</p>
                   <p className="text-xs opacity-70 italic">Senhorio</p>
                 </label>
               </div>
             </div>
 
-            {/* UPLOAD DE DOCUMENTO (SENHORIOS) */}
-            {formData.userType === 'senhorio' && (
+            {formData.userType === 'landlord' && (
               <div className="mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
                 <label className="block text-sm font-bold text-slate-700 mb-2">
                   Verificação de Senhorio <span className="text-red-500">*</span>
