@@ -19,8 +19,12 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // DADOS DE TESTE PARA DESIGN (Enquanto não vêm da Base de Dados)
-  const telefoneTemporario = '+351 912 345 678'; // O teu modelo Django ainda não tem campo de telefone
+  // ESTADOS PARA O FORMULÁRIO DE EDIÇÃO
+  const [editUsername, setEditUsername] = useState('');
+  const [editTelefone, setEditTelefone] = useState('');
+
+  // DADOS DE TESTE PARA DESIGN
+  const telefoneTemporario = '+351 912 345 678';
   const documentosTeste = [
     { nome: 'Cartão de Cidadão', estado: 'Verificado', cor: 'text-green-600 bg-green-50 border-green-100' },
     { nome: 'Registo Predial', estado: 'Verificado', cor: 'text-green-600 bg-green-50 border-green-100' },
@@ -43,7 +47,6 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
           const dados = await res.json();
           setUser(dados);
         } else {
-          // Token expirou ou inválido
           terminarSessao();
         }
       } catch (e) {
@@ -54,6 +57,41 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
     };
     carregarPerfil();
   }, [navigate]);
+
+  // FUNÇÃO PARA ATUALIZAR O PERFIL NO DJANGO
+  const atualizarPerfil = async () => {
+    const token = localStorage.getItem('accessToken');
+    
+    const dadosAtualizados = {
+        username: editUsername,
+        // O telefone não vai para o backend porque o teu Django não tem esse campo, 
+        // mas o nome de utilizador já vai!
+    };
+
+    try {
+        const response = await fetch(`http://127.0.0.1:8000/api/users/${user.id}/`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(dadosAtualizados)
+        });
+
+        if (response.ok) {
+            const dadosNovos = await response.json();
+            alert('Perfil atualizado com sucesso!');
+            setUser(dadosNovos); // Atualiza o ecrã instantaneamente
+            setIsEditOpen(false); // Fecha o modal
+        } else {
+            const erro = await response.json();
+            console.error('Erro ao atualizar:', erro);
+            alert('Erro ao atualizar o perfil. Verifica a consola.');
+        }
+    } catch (error) {
+        console.error('Erro de rede:', error);
+    }
+  };
 
   const terminarSessao = () => {
     localStorage.removeItem('accessToken');
@@ -101,7 +139,11 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
 
             <div className="bg-white rounded-3xl border border-gray-200 p-4 shadow-sm">
               <button 
-                onClick={() => setIsEditOpen(true)}
+                onClick={() => {
+                  setEditUsername(user?.username || '');
+                  setEditTelefone(telefoneTemporario);
+                  setIsEditOpen(true);
+                }}
                 className="w-full text-left p-4 text-sm font-bold text-slate-700 hover:bg-slate-50 rounded-2xl transition-colors"
               >
                 Editar Perfil
@@ -215,16 +257,26 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Nome de Utilizador</label>
-                <input type="text" defaultValue={user?.username} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-sky-500 outline-none" />
+                <input 
+                  type="text" 
+                  value={editUsername}
+                  onChange={(e) => setEditUsername(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-sky-500 outline-none" 
+                />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Telefone de Contacto</label>
-                <input type="text" defaultValue={telefoneTemporario} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-sky-500 outline-none" />
+                <input 
+                  type="text" 
+                  value={editTelefone}
+                  onChange={(e) => setEditTelefone(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-sky-500 outline-none" 
+                />
               </div>
             </div>
             <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
               <button onClick={() => setIsEditOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
-              <button onClick={() => setIsEditOpen(false)} className="px-5 py-2.5 text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition-colors">Guardar Alterações</button>
+              <button onClick={atualizarPerfil} className="px-5 py-2.5 text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition-colors">Guardar Alterações</button>
             </div>
           </div>
         </div>

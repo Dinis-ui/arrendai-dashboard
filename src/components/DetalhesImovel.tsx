@@ -118,7 +118,7 @@ export default function DetalhesImovel() {
     setTimeout(() => {
       setIsCandidaturaOpen(false);
       setCandidaturaEnviada(false);
-      navigate('/portal'); // Volta ao portal para ver o estado "Em análise"
+      navigate('/portalinquilino'); // <-- CORRIGIDO AQUI
     }, 3500);
   };
 
@@ -132,16 +132,14 @@ export default function DetalhesImovel() {
     }, 2000);
   };
   
-  
-
   const imovel = todosImoveis.find(item => item.id === Number(id));
 
   if (!imovel) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 font-sans">
-        <h1 className="text-2xl font-bold text-slate-800 mb-4">Imovel nao encontrado</h1>
+        <h1 className="text-2xl font-bold text-slate-800 mb-4">Imóvel não encontrado</h1>
         <button 
-          onClick={() => navigate('/portal')} 
+          onClick={() => navigate('/portalinquilino')} // <-- CORRIGIDO AQUI
           className="bg-sky-500 hover:bg-sky-600 text-white px-6 py-2 rounded-lg font-medium transition-colors"
         >
           Voltar ao Portal
@@ -153,13 +151,13 @@ export default function DetalhesImovel() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-16">
       
-      {/* Barra de navegacao */}
+      {/* Barra de navegação */}
       <header className="bg-white border-b border-gray-200 px-8 py-4 mb-8">
         <button 
-          onClick={() => navigate('/portal')}
+          onClick={() => navigate('/portalinquilino')} // <-- CORRIGIDO AQUI
           className="flex items-center text-sm font-medium text-slate-500 hover:text-sky-500 transition-colors"
         >
-          Voltar a Pesquisa
+          Voltar à Pesquisa
         </button>
       </header>
 
@@ -168,14 +166,14 @@ export default function DetalhesImovel() {
         <div className="mb-6 flex justify-between items-end">
           <div>
             <div className="flex gap-2 mb-2">
-              <span className="bg-sky-100 text-sky-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">Disponivel</span>
+              <span className="bg-sky-100 text-sky-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">Disponível</span>
               <span className="bg-slate-200 text-slate-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">{imovel.tipo}</span>
             </div>
             <h1 className="text-3xl font-bold text-slate-900">{imovel.title}</h1>
-            <p className="text-slate-500 mt-1 flex items-center gap-1">Localizacao: {imovel.location}</p>
+            <p className="text-slate-500 mt-1 flex items-center gap-1">Localização: {imovel.location}</p>
           </div>
           <div className="text-right">
-            <p className="text-3xl font-bold text-sky-600">{imovel.price}€ <span className="text-lg font-normal text-slate-500">/ mes</span></p>
+            <p className="text-3xl font-bold text-sky-600">{imovel.price}€ <span className="text-lg font-normal text-slate-500">/ mês</span></p>
           </div>
         </div>
 
@@ -201,7 +199,7 @@ export default function DetalhesImovel() {
             
             <div className="flex gap-8 border-y border-slate-200 py-6">
               <div className="text-center">
-                <p className="text-slate-500 text-sm">Area</p>
+                <p className="text-slate-500 text-sm">Área</p>
                 <p className="font-bold text-lg">{imovel.area} m²</p>
               </div>
               <div className="text-center border-l border-slate-200 pl-8">
@@ -215,7 +213,7 @@ export default function DetalhesImovel() {
             </div>
 
             <section>
-              <h2 className="text-xl font-bold text-slate-900 mb-4">Sobre este imovel</h2>
+              <h2 className="text-xl font-bold text-slate-900 mb-4">Sobre este imóvel</h2>
               <p className="text-slate-600 leading-relaxed">{imovel.description}</p>
             </section>
 
@@ -233,9 +231,9 @@ export default function DetalhesImovel() {
 
             {/* Mapa */}
             <section>
-              <h2 className="text-xl font-bold text-slate-900 mb-4">Localizacao</h2>
+              <h2 className="text-xl font-bold text-slate-900 mb-4">Localização</h2>
               <div className="w-full h-64 bg-slate-200 rounded-2xl border border-slate-300 flex items-center justify-center">
-                <span className="text-slate-500 font-medium">[ Integracao com Google Maps aqui ]</span>
+                <span className="text-slate-500 font-medium">[ Integração com Google Maps aqui ]</span>
               </div>
             </section>
 
@@ -281,6 +279,8 @@ export default function DetalhesImovel() {
 
         </div>
       </main>
+      
+      {/* Modal Mensagem */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -301,7 +301,7 @@ export default function DetalhesImovel() {
                     <Send size={24} />
                   </div>
                   <h4 className="text-lg font-bold text-slate-900 mb-2">Mensagem Enviada!</h4>
-                  <p className="text-slate-500">O senhorio foi notificado e ira responder em breve.</p>
+                  <p className="text-slate-500">O senhorio foi notificado e irá responder em breve.</p>
                 </div>
               ) : (
                 <form onSubmit={enviarMensagem}>
@@ -310,7 +310,7 @@ export default function DetalhesImovel() {
                     required
                     value={mensagem}
                     onChange={(e) => setMensagem(e.target.value)}
-                    placeholder={`Ola ${imovel.senhorio}, estou muito interessado neste imovel. Ainda esta disponivel para visitas?`}
+                    placeholder={`Olá ${imovel.senhorio}, estou muito interessado neste imóvel. Ainda está disponível para visitas?`}
                     className="w-full h-32 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm focus:border-sky-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 resize-none mb-4"
                   ></textarea>
                   <button type="submit" className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2">
@@ -322,6 +322,8 @@ export default function DetalhesImovel() {
           </div>
         </div>
       )}
+
+      {/* Modal Candidatura */}
       {isCandidaturaOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in duration-200">
