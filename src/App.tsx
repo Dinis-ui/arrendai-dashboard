@@ -15,7 +15,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/registo" element={<Registo />} />
         <Route path="/recuperar-password" element={<EsqueceuPassword />} />
-        <Route path="/portal" element={<PortalInquilino />} />
+        <Route path="/portalinquilino" element={<PortalInquilino />} />
         <Route path="/imovel/:id" element={<DetalhesImovel />} />
         <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/perfil" element={<Perfil />} />

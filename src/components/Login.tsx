@@ -41,7 +41,7 @@ export default function Login() {
           if (userData.role === 'landlord') {
             navigate('/dashboard-senhorio'); 
           } else {
-            navigate('/portal');
+            navigate('/portalinquilino'); // Rota atualizada aqui!
           }
         }
       } else {
@@ -55,8 +55,18 @@ export default function Login() {
     }
   };
 
-  const entrarComoSenhorio = () => navigate('/dashboard-senhorio'); 
-  const entrarComoInquilino = () => navigate('/portal'); 
+  // TESTES (Acesso Dev) atualizados para enganar a proteção de rotas
+  const entrarComoSenhorio = () => {
+    localStorage.setItem('accessToken', 'token-falso-para-testes');
+    localStorage.setItem('role_teste', 'landlord');
+    navigate('/dashboard-senhorio'); 
+  };
+  
+  const entrarComoInquilino = () => {
+    localStorage.setItem('accessToken', 'token-falso-para-testes');
+    localStorage.setItem('role_teste', 'tenant');
+    navigate('/portalinquilino'); // Rota atualizada aqui também!
+  };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 font-sans text-slate-900">
@@ -121,6 +131,11 @@ export default function Login() {
             <button onClick={entrarComoSenhorio} type="button" className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 border-sky-100 bg-sky-50 text-sky-700 hover:border-sky-300 hover:bg-sky-100 transition-all">
               <Building2 size={24} /> <span className="text-sm font-bold">Painel Senhorio</span>
             </button>
+          </div>
+          
+          <div className="mt-4 flex items-start gap-2 text-xs text-slate-400 bg-slate-50 p-3 rounded-lg border border-slate-100">
+            <ShieldAlert size={16} className="shrink-0 text-slate-400" />
+            <p>Estes botões saltam o login real para facilitar os testes de interface. Devem ser removidos na versão final.</p>
           </div>
         </div>
 

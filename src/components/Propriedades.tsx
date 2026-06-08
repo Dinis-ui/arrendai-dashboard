@@ -49,7 +49,7 @@ export default function Propriedades() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
 
-  // NOVO: Estados para o Modal de Novo Anúncio
+  // Estados de Novo Anúncio
   const [abrirModalAnuncio, setAbrirModalAnuncio] = useState(false);
   const [sucessoAnuncio, setSucessoAnuncio] = useState(false);
 
@@ -197,7 +197,7 @@ export default function Propriedades() {
                 <p className="font-bold text-slate-600">Unidade Vazia</p>
                 <p className="text-sm text-slate-400 mb-4 max-w-sm mx-auto">Ainda não tens nenhum contrato ativo para esta propriedade.</p>
                 
-                {/* BOTÃO QUE ABRE O MODAL DO NOVO ANÚNCIO */}
+                {/* Botão que abre novo Anúncio */}
                 <button 
                   onClick={() => setAbrirModalAnuncio(true)}
                   className="bg-sky-600 hover:bg-sky-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors shadow-md shadow-sky-500/20"
@@ -284,7 +284,7 @@ export default function Propriedades() {
           </div>
         )}
 
-        {/* MODAL: CRIAR NOVO ANÚNCIO (NOVO) */}
+        {/* Criar novo anúncio */}
         {abrirModalAnuncio && (
           <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
             <div className="bg-white rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col">
@@ -348,7 +348,7 @@ export default function Propriedades() {
                         />
                       </div>
 
-                      {/* Fotografias (Simulação) */}
+                      {/* Fotografias */}
                       <div className="space-y-1.5">
                         <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
                           <ImageIcon size={16} className="text-slate-400" /> Fotografias
