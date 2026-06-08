@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Search,
@@ -17,8 +17,6 @@ import {
 } from 'lucide-react';
 
 // DADOS DE TESTE (MOCK DATA)
-// BACKEND: Estas listas devem vir da Base de Dados (ex: GET /api/imoveis)
-
 const menuItems = [
   { name: 'Pesquisar', icon: Search },
   { name: 'Minhas Candidaturas', icon: FileText },
@@ -38,7 +36,6 @@ const listings = [
   { id: 6, title: 'Apartamento T2 Novo', location: 'Braga, Braga', price: 890, area: 88, tipo: 'T2', photo: 'https://images.pexels.com/photos/1918291/pexels-photo-1918291.jpeg?auto=compress&cs=tinysrgb&w=800', tags: ['Novo', 'Garagem', 'Ar condicionado'], available: '15 Mai 2025' },
 ];
 
-// Tipagem para os filtros do TypeScript
 type Filters = {
   distrito: string;
   precoMax: string;
@@ -46,9 +43,6 @@ type Filters = {
   areaMin: string;
 };
 
-
-
-// Componente para desenhar os Selects dos filtros
 function SelectFilter({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (v: string) => void; }) {
   return (
     <div className="relative">
@@ -69,9 +63,8 @@ function SelectFilter({ label, value, options, onChange }: { label: string; valu
   );
 }
 
-// Componente que desenha o Cartão de cada Imóvel
 function PropertyCard({ listing, onApply }: { listing: typeof listings[0]; onApply: (id: number) => void }) {
-  const [saved, setSaved] = useState(false); // Estado para o botão de favoritos (Coração)
+  const [saved, setSaved] = useState(false);
 
   return (
     <Link 
@@ -85,8 +78,8 @@ function PropertyCard({ listing, onApply }: { listing: typeof listings[0]; onApp
         </div>
         <button
           onClick={(e) => {
-            e.preventDefault(); // Impede que o clique no coração mude a página
-            setSaved(!saved); // BACKEND: Isto precisará de um POST para guardar nos Favoritos da DB
+            e.preventDefault();
+            setSaved(!saved);
           }}
           className="absolute top-3 right-3 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors"
         >
@@ -120,7 +113,7 @@ function PropertyCard({ listing, onApply }: { listing: typeof listings[0]; onApp
           </div>
           <button
             onClick={(e) => {
-              e.preventDefault(); // Impede que o botão de candidatar mude a página
+              e.preventDefault();
               onApply(listing.id);
             }}
             className="flex items-center gap-1.5 bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm"
@@ -137,7 +130,9 @@ function PropertyCard({ listing, onApply }: { listing: typeof listings[0]; onApp
 export default function PortalInquilino() {
   const navigate = useNavigate();
   
-  // GESTÃO DE ESTADOS (Navegação e Filtros)
+  // ESTADO DO UTILIZADOR LOGADO
+  const [user, setUser] = useState<any>(null);
+
   const [activeTab, setActiveTab] = useState('Pesquisar');
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<Filters>({
@@ -147,34 +142,50 @@ export default function PortalInquilino() {
     areaMin: '',
   });
   
-  // Array que guarda os IDs dos imóveis a que o utilizador já se candidatou
-  // BACKEND: Ao fazer login, devemos carregar as candidaturas do utilizador da BD para este estado
   const [appliedIds, setAppliedIds] = useState<number[]>([]);
-
-  // GESTÃO DE ESTADOS (Notificações)
   const [showNotifications, setShowNotifications] = useState(false);
-  // BACKEND: As notificações devem vir via WebSockets ou GET request periódico
   const [notificacoes, setNotificacoes] = useState([
-    { id: 1, titulo: 'Candidatura Aprovada!', desc: 'O senhorio aceitou a tua candidatura para o T2 no Príncipe Real.', tempo: 'Há 10 min', lida: false },
-    { id: 2, titulo: 'Nova Mensagem', desc: 'João Silva enviou-te uma mensagem sobre o contrato.', tempo: 'Há 1 hora', lida: false },
-    { id: 3, titulo: 'Alerta de Pesquisa', desc: 'Há 3 novos imóveis em Lisboa que correspondem aos teus favoritos.', tempo: 'Há 1 dia', lida: true },
+    { id: 1, titulo: 'Candidatura Aprovada!', desc: 'O senhorio aceitou a tua candidatura.', tempo: 'Há 10 min', lida: false },
+    { id: 2, titulo: 'Nova Mensagem', desc: 'João Silva enviou-te uma mensagem.', tempo: 'Há 1 hora', lida: false },
   ]);
 
   const naoLidas = notificacoes.filter(n => !n.lida).length;
 
-  // Função disparada quando se clica em "Candidatar-me" num anúncio
+  // LÓGICA PARA IR BUSCAR O NOME DO UTILIZADOR À BASE DE DADOS
+  useEffect(() => {
+    const carregarUtilizador = async () => {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+      try {
+        const res = await fetch('http://127.0.0.1:8000/api/users/me/', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const dados = await res.json();
+          setUser(dados);
+        } else {
+          // Se o token for inválido, manda para o login
+          localStorage.removeItem('accessToken');
+          navigate('/login');
+        }
+      } catch (e) {
+        console.error("Erro ao carregar utilizador:", e);
+      }
+    };
+    carregarUtilizador();
+  }, [navigate]);
+
+
   const handleApply = (id: number) => {
-    // Adiciona o ID do imóvel à lista de candidaturas (evitando duplicados)
-    // BACKEND: Fazer aqui o POST request para submeter a candidatura real
     setAppliedIds((prev) => prev.includes(id) ? prev : [...prev, id]);
   };
 
-  // Função auxiliar para atualizar o estado dos filtros
   const setFilter = (key: keyof Filters) => (value: string) =>
     setFilters((prev) => ({ ...prev, [key]: value }));
 
-  // LÓGICA DE FILTRAGEM (Feita no frontend nesta fase)
-  // BACKEND: Se a base de dados crescer muito, esta filtragem deve ser feita no backend (passando query params no fetch)
   const filtered = listings.filter((l) => {
     const matchSearch = search === '' || l.title.toLowerCase().includes(search.toLowerCase()) || l.location.toLowerCase().includes(search.toLowerCase());
     const matchDistrito = filters.distrito === 'Todos' || l.location.includes(filters.distrito);
@@ -187,7 +198,6 @@ export default function PortalInquilino() {
   return (
     <div className="flex h-screen bg-gray-50 font-sans text-slate-900">
 
-      
       <aside className="w-64 bg-slate-900 text-white flex flex-col">
         {/* LOGO */}
         <div className="p-6 flex items-center gap-3">
@@ -219,24 +229,26 @@ export default function PortalInquilino() {
           </Link>
         </nav>
 
-        {/* RODAPÉ DO MENU (Perfil) */}
+        {/* RODAPÉ DO MENU (Perfil Dinâmico) */}
         <div className="p-4 border-t border-slate-800">
           <div 
-            onClick={() => navigate('/perfil')} // Navega para a página de perfil
+            onClick={() => navigate('/perfil')}
             className="flex items-center gap-3 px-2 py-2 cursor-pointer hover:bg-slate-800 rounded-lg transition-colors"
           >
-            <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold">MF</div>
+            {/* LETRA INICIAL DINÂMICA */}
+            <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold uppercase">
+              {user?.username ? user.username.charAt(0) : '?'}
+            </div>
             <div>
-              <p className="text-sm font-medium text-white">Maria Ferreira</p>
-              <p className="text-xs text-slate-400">Inquilina</p>
+              {/* NOME DE UTILIZADOR DINÂMICO */}
+              <p className="text-sm font-medium text-white">{user?.username || 'A carregar...'}</p>
+              <p className="text-xs text-slate-400">Inquilino</p>
             </div>
           </div>
         </div>
       </aside>
 
-     
       <main className="flex-1 flex flex-col overflow-hidden">
-
         {/* HEADER (Topo) */}
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 flex-shrink-0 relative z-20">
           <div>
@@ -284,15 +296,13 @@ export default function PortalInquilino() {
                       ))
                     )}
                   </div>
-                  <div className="p-3 text-center border-t border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors">
-                    <span className="text-xs font-bold text-slate-500">Ver todo o histórico</span>
-                  </div>
                 </div>
               )}
             </div>
 
-            <div className="w-9 h-9 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold text-sm">
-              <User size={18} />
+            {/* AVATAR DE TOPO DINÂMICO */}
+            <div className="w-9 h-9 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold text-sm uppercase">
+              {user?.username ? user.username.charAt(0) : <User size={18} />}
             </div>
           </div>
         </header>
@@ -336,7 +346,7 @@ export default function PortalInquilino() {
                 </div>
               </div>
 
-              {/* LISTAGEM DE IMÓVEIS (Grelha) */}
+              {/* LISTAGEM DE IMÓVEIS */}
               <div className="flex items-center justify-between mb-5">
                 <p className="text-slate-600 text-sm font-medium"><span className="font-bold text-slate-900">{filtered.length}</span> imóveis encontrados</p>
                 <span className="text-xs text-slate-400">Ordenado por: Relevância</span>
@@ -362,7 +372,6 @@ export default function PortalInquilino() {
           {activeTab === 'Minhas Candidaturas' && (
             <div className="p-8">
               <h2 className="text-xl font-bold text-slate-800 mb-6">Minhas Candidaturas</h2>
-              {/* Filtra a lista principal para mostrar apenas os imóveis onde o ID está em 'appliedIds' */}
               {appliedIds.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-24 text-center">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4"><FileText size={28} className="text-gray-400" /></div>
@@ -380,7 +389,6 @@ export default function PortalInquilino() {
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-slate-800">{l.price.toLocaleString('pt-PT')}€<span className="text-slate-400 font-normal text-sm">/mês</span></p>
-                        {/* BACKEND: O estado "Em análise" deve ser dinâmico consoante o status na DB */}
                         <span className="text-xs font-semibold text-amber-700 bg-amber-100 px-2.5 py-1 rounded-full mt-1 inline-block">Em análise</span>
                       </div>
                     </div>
@@ -394,7 +402,6 @@ export default function PortalInquilino() {
           {activeTab === 'As Minhas Rendas' && (
             <div className="p-8">
               <h2 className="text-xl font-bold text-slate-800 mb-6">As Minhas Rendas</h2>
-              {/* BACKEND: Apresentar histórico de faturas/pagamentos do inquilino aqui */}
               <div className="flex flex-col items-center justify-center py-24 text-center">
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4"><Wallet size={28} className="text-gray-400" /></div>
                 <p className="text-slate-700 font-semibold mb-1">Sem contrato ativo</p>

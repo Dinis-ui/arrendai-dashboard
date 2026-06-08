@@ -60,11 +60,12 @@ export default function Mensagens() {
   return (
     <div className="flex h-screen bg-slate-50 font-sans text-slate-900">
       
-      {/* PAINEL ESQUERDO: Lista de Conversas */}
+      {/* MENU LATERAL DE CONVERSAS */}
       <div className="w-1/3 bg-white border-r border-slate-200 flex flex-col h-full z-10 shadow-sm">
         <div className="p-6 border-b border-slate-100 flex-shrink-0">
           <div className="flex items-center gap-3 mb-6">
-            <button onClick={() => navigate('/portal')} className="text-slate-400 hover:text-sky-500">
+            {/* BOTÃO DE VOLTAR CORRIGIDO AQUI */}
+            <button onClick={() => navigate(-1)} className="text-slate-400 hover:text-sky-500 transition-colors">
               <ArrowLeft size={20} />
             </button>
             <h1 className="text-xl font-bold text-slate-800">Mensagens</h1>
@@ -113,10 +114,10 @@ export default function Mensagens() {
         </div>
       </div>
 
-      {/* PAINEL DIREITO: Area de Chat */}
+      {/* ÁREA DA CONVERSA ATIVA */}
       <div className="flex-1 flex flex-col h-full bg-slate-50/50">
         
-        {/* Cabecalho do Chat */}
+        {/* CABEÇALHO DA CONVERSA */}
         <div className="h-20 bg-white border-b border-slate-200 flex items-center px-8 flex-shrink-0">
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center font-bold text-sky-700">
@@ -129,7 +130,7 @@ export default function Mensagens() {
           </div>
         </div>
 
-        {/* Historico de Mensagens */}
+        {/* HISTÓRICO DE MENSAGENS */}
         <div className="flex-1 overflow-y-auto p-8 space-y-6">
           <div className="text-center">
             <span className="bg-slate-200 text-slate-600 text-xs font-bold px-3 py-1 rounded-full">Hoje</span>
@@ -151,7 +152,7 @@ export default function Mensagens() {
           ))}
         </div>
 
-        {/* Area de Input */}
+        {/* CAIXA DE ESCRITA */}
         <div className="p-6 bg-white border-t border-slate-200 flex-shrink-0">
           <form onSubmit={sendMessage} className="flex gap-3">
             <button type="button" className="p-3 text-slate-400 hover:text-sky-500 hover:bg-slate-50 rounded-xl transition-colors">
