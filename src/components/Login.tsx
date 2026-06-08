@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom'; 
-import { Building2, Home, ShieldAlert } from 'lucide-react'; 
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -41,7 +40,7 @@ export default function Login() {
           if (userData.role === 'landlord') {
             navigate('/dashboard-senhorio'); 
           } else {
-            navigate('/portalinquilino'); // Rota atualizada aqui!
+            navigate('/portalinquilino'); 
           }
         }
       } else {
@@ -53,19 +52,6 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
-  };
-
-  // TESTES (Acesso Dev) atualizados para enganar a proteção de rotas
-  const entrarComoSenhorio = () => {
-    localStorage.setItem('accessToken', 'token-falso-para-testes');
-    localStorage.setItem('role_teste', 'landlord');
-    navigate('/dashboard-senhorio'); 
-  };
-  
-  const entrarComoInquilino = () => {
-    localStorage.setItem('accessToken', 'token-falso-para-testes');
-    localStorage.setItem('role_teste', 'tenant');
-    navigate('/portalinquilino'); // Rota atualizada aqui também!
   };
 
   return (
@@ -90,6 +76,7 @@ export default function Login() {
                 required
               />
             </div>
+            
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700">Password</label>
               <input 
@@ -101,6 +88,18 @@ export default function Login() {
                 required
               />
             </div>
+
+            {/* ADICIONADO: Lembrar-me e Recuperação de Password */}
+            <div className="flex items-center justify-between pb-2">
+              <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+                <input type="checkbox" className="rounded border-gray-300 text-sky-500 focus:ring-sky-500 cursor-pointer" />
+                Lembrar de mim
+              </label>
+              <Link to="/recuperar-password" className="text-sm font-medium text-sky-500 hover:text-sky-600 transition-colors">
+                Esqueceste a password?
+              </Link>
+            </div>
+
             <button 
               type="submit" 
               disabled={loading}
@@ -108,6 +107,7 @@ export default function Login() {
             >
               {loading ? 'A verificar...' : 'Entrar na conta'}
             </button>
+            
             {mensagem && (
               <div className={`mt-4 rounded-lg p-3 text-center text-sm font-medium ${
                 mensagem.includes('sucesso') ? 'bg-green-50 text-green-700 border border-green-200' : 
@@ -117,31 +117,11 @@ export default function Login() {
               </div>
             )}
           </form>
-
-          <div className="mt-8 flex items-center gap-4">
-            <div className="flex-1 h-px bg-gray-200"></div>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Acesso Rápido (Dev)</span>
-            <div className="flex-1 h-px bg-gray-200"></div>
-          </div>
-
-          <div className="mt-6 grid grid-cols-2 gap-4">
-            <button onClick={entrarComoInquilino} type="button" className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 border-emerald-100 bg-emerald-50 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-100 transition-all">
-              <Home size={24} /> <span className="text-sm font-bold">Portal Inquilino</span>
-            </button>
-            <button onClick={entrarComoSenhorio} type="button" className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 border-sky-100 bg-sky-50 text-sky-700 hover:border-sky-300 hover:bg-sky-100 transition-all">
-              <Building2 size={24} /> <span className="text-sm font-bold">Painel Senhorio</span>
-            </button>
-          </div>
-          
-          <div className="mt-4 flex items-start gap-2 text-xs text-slate-400 bg-slate-50 p-3 rounded-lg border border-slate-100">
-            <ShieldAlert size={16} className="shrink-0 text-slate-400" />
-            <p>Estes botões saltam o login real para facilitar os testes de interface. Devem ser removidos na versão final.</p>
-          </div>
         </div>
 
         <p className="mt-8 text-center text-sm text-slate-500">
           Ainda não tens conta?{' '}
-          <Link to="/registo" className="font-semibold text-sky-500 hover:text-sky-600">Registar conta</Link>
+          <Link to="/registo" className="font-semibold text-sky-500 hover:text-sky-600 transition-colors">Registar conta</Link>
         </p>
       </div>
     </div>

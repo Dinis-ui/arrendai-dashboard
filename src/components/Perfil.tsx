@@ -2,7 +2,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Mail, Phone, LogOut, ArrowLeft, X } from 'lucide-react';
 
-export default function Perfil() {
+interface PerfilProps {
+  onBack?: () => void; // Tornamos opcional, pois agora usamos o navigate interno
+}
+
+export default function PerfilInquilino({ onBack }: PerfilProps) {
   const navigate = useNavigate();
 
   // ESTADOS DOS MODAIS
@@ -12,6 +16,10 @@ export default function Perfil() {
   // ESTADO DO UTILIZADOR REAL (Vindo da API)
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  // ESTADOS PARA O FORMULÁRIO DE EDIÇÃO (O que o utilizador digita)
+  const [editUsername, setEditUsername] = useState('');
+  const [editTelefone, setEditTelefone] = useState('');
 
   // DADOS DE TESTE PARA DESIGN
   const telefoneTemporario = '+351 912 345 678'; 
@@ -43,9 +51,44 @@ export default function Perfil() {
     carregarPerfil();
   }, [navigate]);
 
+  // FUNÇÃO PARA ATUALIZAR O PERFIL NO DJANGO
+  const atualizarPerfil = async () => {
+    const token = localStorage.getItem('accessToken');
+    
+    // Os dados que vão ser enviados para o Django
+    const dadosAtualizados = {
+        username: editUsername,
+    };
+
+    try {
+        const response = await fetch(`http://127.0.0.1:8000/api/users/${user.id}/`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(dadosAtualizados)
+        });
+
+        if (response.ok) {
+            const dadosNovos = await response.json();
+            alert('Perfil atualizado com sucesso na Base de Dados!');
+            setUser(dadosNovos); // Atualiza o ecrã instantaneamente
+            setIsEditOpen(false); // Fecha o modal
+        } else {
+            const erro = await response.json();
+            console.error('Erro ao atualizar:', erro);
+            alert('Erro ao atualizar o perfil. Verifica a consola.');
+        }
+    } catch (error) {
+        console.error('Erro de rede:', error);
+    }
+  };
+
   const terminarSessao = () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
+    localStorage.removeItem('role_teste');
     navigate('/login');
   };
 
@@ -60,10 +103,11 @@ export default function Perfil() {
       <header className="bg-white border-b border-gray-200 px-8 py-6 mb-8 sticky top-0 z-10 shadow-sm">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <button 
-            onClick={() => navigate('/portalinquilino')}
-            className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-sky-600 transition-colors bg-slate-50 px-4 py-2 rounded-xl"
+            // CORRIGIDO AQUI: Volta sempre para a página anterior, independentemente do cargo!
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-sky-600 transition-colors bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 hover:border-sky-200"
           >
-            <ArrowLeft size={18} /> Voltar ao Portal
+            <ArrowLeft size={18} /> Voltar
           </button>
           <div className="flex items-center gap-2">
             <h1 className="font-bold text-slate-800 tracking-tight">Definições de Conta</h1>
@@ -81,12 +125,19 @@ export default function Perfil() {
                 {user?.username ? user?.username.charAt(0) : '?'}
               </div>
               <h2 className="text-2xl font-bold text-slate-900">{user?.username}</h2>
-              <p className="text-slate-500 font-medium text-sm mb-6">Inquilino</p>
+              {/* O cargo deve vir da BD, mostramos Inquilino como default se o campo role não existir */}
+              <p className="text-slate-500 font-medium text-sm mb-6 capitalize">
+                {user?.role === 'landlord' ? 'Senhorio' : 'Inquilino'}
+              </p>
             </div>
 
             <div className="bg-white rounded-3xl border border-gray-200 p-4 shadow-sm">
               <button 
-                onClick={() => setIsEditOpen(true)}
+                onClick={() => {
+                  setEditUsername(user?.username || '');
+                  setEditTelefone(telefoneTemporario);
+                  setIsEditOpen(true);
+                }}
                 className="w-full text-left p-4 text-sm font-bold text-slate-700 hover:bg-slate-50 rounded-2xl transition-colors"
               >
                 Editar Perfil
@@ -163,16 +214,26 @@ export default function Perfil() {
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Nome de Utilizador</label>
-                <input type="text" defaultValue={user?.username} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-emerald-500 outline-none" />
+                <input 
+                  type="text" 
+                  value={editUsername}
+                  onChange={(e) => setEditUsername(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-emerald-500 outline-none" 
+                />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Telefone de Contacto</label>
-                <input type="text" defaultValue={telefoneTemporario} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-emerald-500 outline-none" />
+                <input 
+                  type="text" 
+                  value={editTelefone}
+                  onChange={(e) => setEditTelefone(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-emerald-500 outline-none" 
+                />
               </div>
             </div>
             <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
               <button onClick={() => setIsEditOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
-              <button onClick={() => setIsEditOpen(false)} className="px-5 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors">Guardar Alterações</button>
+              <button onClick={atualizarPerfil} className="px-5 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors">Guardar Alterações</button>
             </div>
           </div>
         </div>
