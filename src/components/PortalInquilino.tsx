@@ -150,7 +150,7 @@ export default function PortalInquilino() {
   // LÓGICA PARA IR BUSCAR O NOME DO UTILIZADOR
   useEffect(() => {
     const carregarUtilizador = async () => {
-      const token = localStorage.getItem('accessToken');
+      const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
       if (!token) {
         navigate('/login');
         return;

@@ -61,7 +61,7 @@ export default function Mensagens() {
   // CARREGAR DADOS DO UTILIZADOR 
   useEffect(() => {
     const carregarUtilizador = async () => {
-      const token = localStorage.getItem('accessToken');
+      const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
       if (!token) {
         navigate('/login');
         return;

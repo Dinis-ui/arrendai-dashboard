@@ -60,7 +60,7 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
 
   // FUNÇÃO PARA ATUALIZAR O PERFIL NO DJANGO
   const atualizarPerfil = async () => {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
     
     const dadosAtualizados = {
         username: editUsername,

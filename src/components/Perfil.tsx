@@ -53,7 +53,7 @@ export default function PerfilInquilino({ onBack }: PerfilProps) {
 
   // FUNÇÃO PARA ATUALIZAR O PERFIL NO DJANGO
   const atualizarPerfil = async () => {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
     
     // Os dados que vão ser enviados para o Django
     const dadosAtualizados = {
