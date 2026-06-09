@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [lembrar, setLembrar] = useState(false); // ESTADO PARA A CHECKBOX
   const [mensagem, setMensagem] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -24,10 +25,13 @@ export default function Login() {
 
       if (resposta.ok) {
         const dados = await resposta.json();
-        localStorage.setItem('accessToken', dados.access);
-        localStorage.setItem('refreshToken', dados.refresh);
         
-        // 2. BUSCAR OS DADOS DO UTILIZADOR (para saber o cargo)
+        // Lógica "Lembrar de mim": se ativo, guarda no localStorage, senão no sessionStorage
+        const storage = lembrar ? localStorage : sessionStorage;
+        storage.setItem('accessToken', dados.access);
+        storage.setItem('refreshToken', dados.refresh);
+        
+        // 2. BUSCAR OS DADOS DO UTILIZADOR
         const resUser = await fetch('http://127.0.0.1:8000/api/users/me/', {
           headers: { 'Authorization': `Bearer ${dados.access}` }
         });
@@ -89,10 +93,14 @@ export default function Login() {
               />
             </div>
 
-            {/* ADICIONADO: Lembrar-me e Recuperação de Password */}
             <div className="flex items-center justify-between pb-2">
               <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
-                <input type="checkbox" className="rounded border-gray-300 text-sky-500 focus:ring-sky-500 cursor-pointer" />
+                <input 
+                    type="checkbox" 
+                    checked={lembrar}
+                    onChange={(e) => setLembrar(e.target.checked)}
+                    className="rounded border-gray-300 text-sky-500 focus:ring-sky-500 cursor-pointer" 
+                />
                 Lembrar de mim
               </label>
               <Link to="/recuperar-password" className="text-sm font-medium text-sky-500 hover:text-sky-600 transition-colors">

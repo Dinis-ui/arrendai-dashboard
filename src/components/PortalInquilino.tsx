@@ -1,19 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Search,
-  MapPin,
-  Home,
-  FileText,
-  Wallet,
-  Bell,
-  ChevronDown,
-  SlidersHorizontal,
-  Heart,
-  ArrowUpRight,
-  User,
-  MessageSquare,
-  Check 
+  Search, MapPin, Home, FileText, Wallet, Bell, ChevronDown, 
+  SlidersHorizontal, Heart, ArrowUpRight, User, MessageSquare, 
+  Check, X, UploadCloud, CheckCircle // <-- Adicionados novos ícones
 } from 'lucide-react';
 
 // DADOS DE TESTE (MOCK DATA)
@@ -28,12 +18,12 @@ const tipologias = ['Todas', 'T0', 'T1', 'T2', 'T3', 'T4+'];
 const precos = ['Qualquer', '500€', '750€', '1.000€', '1.500€', '2.000€', '2.500€+'];
 
 const listings = [
-  { id: 1, title: 'Apartamento T2 com Varanda', location: 'Príncipe Real, Lisboa', price: 1350, area: 78, tipo: 'T2', photo: 'https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=800', tags: ['Varanda', 'Mobilado', 'Animais OK'], available: 'Disponível agora' },
-  { id: 2, title: 'Studio Moderno no Centro', location: 'Baixa, Porto', price: 820, area: 42, tipo: 'T0', photo: 'https://images.pexels.com/photos/1428348/pexels-photo-1428348.jpeg?auto=compress&cs=tinysrgb&w=800', tags: ['Wi-Fi incluído', 'Mobilado'], available: 'Disponível agora' },
-  { id: 3, title: 'Moradia T3 com Jardim', location: 'Cascais, Setúbal', price: 2100, area: 145, tipo: 'T3', photo: 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&cs=tinysrgb&w=800', tags: ['Jardim', 'Garagem', 'Piscina'], available: '1 Jun 2025' },
-  { id: 4, title: 'Apartamento T1 com Vista Rio', location: 'Ribeira, Porto', price: 980, area: 55, tipo: 'T1', photo: 'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=800', tags: ['Vista Rio', 'Mobilado'], available: 'Disponível agora' },
-  { id: 5, title: 'Loft T1 em Edifício Histórico', location: 'Alfama, Lisboa', price: 1150, area: 65, tipo: 'T1', photo: 'https://images.pexels.com/photos/439391/pexels-photo-439391.jpeg?auto=compress&cs=tinysrgb&w=800', tags: ['Pé-direito alto', 'Histórico'], available: 'Disponível agora' },
-  { id: 6, title: 'Apartamento T2 Novo', location: 'Braga, Braga', price: 890, area: 88, tipo: 'T2', photo: 'https://images.pexels.com/photos/1918291/pexels-photo-1918291.jpeg?auto=compress&cs=tinysrgb&w=800', tags: ['Novo', 'Garagem', 'Ar condicionado'], available: '15 Mai 2025' },
+  { id: 1, title: 'Apartamento T2 com Varanda', location: 'Príncipe Real, Lisboa', price: 1350, area: 78, tipo: 'T2', photo: 'https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=800', tags: ['Varanda', 'Mobilado', 'Animais OK'], available: 'Disponível agora', senhorio: 'Dinis G.' },
+  { id: 2, title: 'Studio Moderno no Centro', location: 'Baixa, Porto', price: 820, area: 42, tipo: 'T0', photo: 'https://images.pexels.com/photos/1428348/pexels-photo-1428348.jpeg?auto=compress&cs=tinysrgb&w=800', tags: ['Wi-Fi incluído', 'Mobilado'], available: 'Disponível agora', senhorio: 'Maria S.' },
+  { id: 3, title: 'Moradia T3 com Jardim', location: 'Cascais, Setúbal', price: 2100, area: 145, tipo: 'T3', photo: 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&cs=tinysrgb&w=800', tags: ['Jardim', 'Garagem', 'Piscina'], available: '1 Jun 2025', senhorio: 'Carlos M.' },
+  { id: 4, title: 'Apartamento T1 com Vista Rio', location: 'Ribeira, Porto', price: 980, area: 55, tipo: 'T1', photo: 'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=800', tags: ['Vista Rio', 'Mobilado'], available: 'Disponível agora', senhorio: 'Ana P.' },
+  { id: 5, title: 'Loft T1 em Edifício Histórico', location: 'Alfama, Lisboa', price: 1150, area: 65, tipo: 'T1', photo: 'https://images.pexels.com/photos/439391/pexels-photo-439391.jpeg?auto=compress&cs=tinysrgb&w=800', tags: ['Pé-direito alto', 'Histórico'], available: 'Disponível agora', senhorio: 'João R.' },
+  { id: 6, title: 'Apartamento T2 Novo', location: 'Braga, Braga', price: 890, area: 88, tipo: 'T2', photo: 'https://images.pexels.com/photos/1918291/pexels-photo-1918291.jpeg?auto=compress&cs=tinysrgb&w=800', tags: ['Novo', 'Garagem', 'Ar condicionado'], available: '15 Mai 2025', senhorio: 'Construtora Lda.' },
 ];
 
 type Filters = {
@@ -63,69 +53,70 @@ function SelectFilter({ label, value, options, onChange }: { label: string; valu
   );
 }
 
-function PropertyCard({ listing, onApply }: { listing: typeof listings[0]; onApply: (id: number) => void }) {
+function PropertyCard({ listing, onApply }: { listing: typeof listings[0]; onApply: (imovel: typeof listings[0]) => void }) {
   const [saved, setSaved] = useState(false);
 
   return (
-    <Link 
-      to={`/imovel/${listing.id}`}
-      className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 group flex flex-col cursor-pointer block"
-    >
-      <div className="relative overflow-hidden h-48">
-        <img src={listing.photo} alt={listing.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-        <div className="absolute top-3 left-3">
-          <span className="bg-white/90 backdrop-blur-sm text-slate-700 text-xs font-semibold px-2.5 py-1 rounded-full">{listing.tipo}</span>
-        </div>
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            setSaved(!saved);
-          }}
-          className="absolute top-3 right-3 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors"
-        >
-          <Heart size={15} className={saved ? 'fill-rose-500 text-rose-500' : 'text-slate-400'} />
-        </button>
-        <div className="absolute bottom-3 left-3">
-          <span className="bg-emerald-500 text-white text-xs font-semibold px-2.5 py-1 rounded-full">{listing.available}</span>
-        </div>
-      </div>
-
-      <div className="p-5 flex flex-col flex-1">
-        <div className="mb-3">
-          <h3 className="font-bold text-slate-800 text-base leading-snug mb-1">{listing.title}</h3>
-          <div className="flex items-center gap-1 text-slate-500 text-sm">
-            <MapPin size={13} /> <span>{listing.location}</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 text-xs text-slate-500 mb-4">
-          <span className="flex items-center gap-1"><Home size={12} />{listing.area} m²</span>
-          <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-          {listing.tags.slice(0, 2).map((tag) => (
-            <span key={tag} className="bg-sky-50 text-sky-700 px-2 py-0.5 rounded-full font-medium">{tag}</span>
-          ))}
-        </div>
-
-        <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-100">
-          <div>
-            <span className="text-2xl font-bold text-slate-900">{listing.price.toLocaleString('pt-PT')}€</span>
-            <span className="text-slate-400 text-sm">/mês</span>
+    <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 group flex flex-col relative">
+      {/* O Link envolve apenas a imagem e os dados, deixando o botão independente */}
+      <Link to={`/imovel/${listing.id}`} className="block">
+        <div className="relative overflow-hidden h-48">
+          <img src={listing.photo} alt={listing.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          <div className="absolute top-3 left-3">
+            <span className="bg-white/90 backdrop-blur-sm text-slate-700 text-xs font-semibold px-2.5 py-1 rounded-full">{listing.tipo}</span>
           </div>
           <button
             onClick={(e) => {
               e.preventDefault();
-              onApply(listing.id);
+              setSaved(!saved);
             }}
-            className="flex items-center gap-1.5 bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm"
+            className="absolute top-3 right-3 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors z-10"
           >
-            Candidatar-me <ArrowUpRight size={14} />
+            <Heart size={15} className={saved ? 'fill-rose-500 text-rose-500' : 'text-slate-400'} />
           </button>
+          <div className="absolute bottom-3 left-3">
+            <span className="bg-emerald-500 text-white text-xs font-semibold px-2.5 py-1 rounded-full">{listing.available}</span>
+          </div>
         </div>
+
+        <div className="p-5 flex flex-col flex-1">
+          <div className="mb-3">
+            <h3 className="font-bold text-slate-800 text-base leading-snug mb-1 group-hover:text-sky-600 transition-colors">{listing.title}</h3>
+            <div className="flex items-center gap-1 text-slate-500 text-sm">
+              <MapPin size={13} /> <span>{listing.location}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 text-xs text-slate-500 mb-4">
+            <span className="flex items-center gap-1"><Home size={12} />{listing.area} m²</span>
+            <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+            {listing.tags.slice(0, 2).map((tag) => (
+              <span key={tag} className="bg-sky-50 text-sky-700 px-2 py-0.5 rounded-full font-medium">{tag}</span>
+            ))}
+          </div>
+        </div>
+      </Link>
+      
+      {/* O Footer com o botão fica fora do Link */}
+      <div className="px-5 pb-5 mt-auto pt-4 border-t border-gray-100 flex items-center justify-between">
+        <div>
+          <span className="text-2xl font-bold text-slate-900">{listing.price.toLocaleString('pt-PT')}€</span>
+          <span className="text-slate-400 text-sm">/mês</span>
+        </div>
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation(); // Impede que o clique "vaze" para o link do cartão
+            onApply(listing); // Passa o objeto do imóvel para o Modal
+          }}
+          className="flex items-center gap-1.5 bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm"
+        >
+          Candidatar-me <ArrowUpRight size={14} />
+        </button>
       </div>
-    </Link>
+    </div>
   );
 }
-
 
 export default function PortalInquilino() {
   const navigate = useNavigate();
@@ -151,7 +142,12 @@ export default function PortalInquilino() {
 
   const naoLidas = notificacoes.filter(n => !n.lida).length;
 
-  // LÓGICA PARA IR BUSCAR O NOME DO UTILIZADOR À BASE DE DADOS
+  // ESTADOS DO MODAL DE CANDIDATURA
+  const [isCandidaturaOpen, setIsCandidaturaOpen] = useState(false);
+  const [candidaturaEnviada, setCandidaturaEnviada] = useState(false);
+  const [imovelCandidatura, setImovelCandidatura] = useState<typeof listings[0] | null>(null);
+
+  // LÓGICA PARA IR BUSCAR O NOME DO UTILIZADOR
   useEffect(() => {
     const carregarUtilizador = async () => {
       const token = localStorage.getItem('accessToken');
@@ -167,7 +163,6 @@ export default function PortalInquilino() {
           const dados = await res.json();
           setUser(dados);
         } else {
-          // Se o token for inválido, manda para o login
           localStorage.removeItem('accessToken');
           navigate('/login');
         }
@@ -178,11 +173,46 @@ export default function PortalInquilino() {
     carregarUtilizador();
   }, [navigate]);
 
-
-  const handleApply = (id: number) => {
-    setAppliedIds((prev) => prev.includes(id) ? prev : [...prev, id]);
+  // Função para abrir o Modal de Candidatura
+  const handleOpenCandidatura = (imovel: typeof listings[0]) => {
+    setImovelCandidatura(imovel);
+    setIsCandidaturaOpen(true);
+    setCandidaturaEnviada(false);
   };
 
+  // Função para submeter a candidatura a partir do Modal
+  const submeterCandidatura = (e: React.FormEvent) => {
+    e.preventDefault();
+    setCandidaturaEnviada(true);
+    
+    if (imovelCandidatura) {
+       setAppliedIds((prev) => prev.includes(imovelCandidatura.id) ? prev : [...prev, imovelCandidatura.id]);
+       
+       // CRIA A CONVERSA E GUARDA NO LOCALSTORAGE
+       const novaConversa = {
+         id: Date.now(),
+         senhorio: imovelCandidatura.senhorio,
+         imovel: imovelCandidatura.title,
+         avatar: imovelCandidatura.senhorio.substring(0, 2).toUpperCase(),
+         unread: true,
+         lastMessage: 'Candidatura submetida com sucesso.',
+         time: 'Agora',
+         history: [
+            { sender: 'them', text: `Olá, candidatei-me ao seu imóvel: ${imovelCandidatura.title}`, time: 'Agora' }
+         ]
+       };
+       
+       // Vai buscar as conversas que já existem e adiciona a nova
+       const conversasGuardadas = JSON.parse(localStorage.getItem('minhasConversas') || '[]');
+       localStorage.setItem('minhasConversas', JSON.stringify([novaConversa, ...conversasGuardadas]));
+    }
+
+    setTimeout(() => {
+      setIsCandidaturaOpen(false);
+      setCandidaturaEnviada(false);
+      setImovelCandidatura(null);
+    }, 3000);
+  };
   const setFilter = (key: keyof Filters) => (value: string) =>
     setFilters((prev) => ({ ...prev, [key]: value }));
 
@@ -196,9 +226,9 @@ export default function PortalInquilino() {
   });
 
   return (
-    <div className="flex h-screen bg-gray-50 font-sans text-slate-900">
+    <div className="flex h-screen bg-gray-50 font-sans text-slate-900 relative">
 
-      <aside className="w-64 bg-slate-900 text-white flex flex-col">
+      <aside className="w-64 bg-slate-900 text-white flex flex-col z-10">
         {/* LOGO */}
         <div className="p-6 flex items-center gap-3">
           <div className="w-8 h-8 bg-sky-500 rounded-lg flex items-center justify-center">
@@ -235,12 +265,10 @@ export default function PortalInquilino() {
             onClick={() => navigate('/perfil')}
             className="flex items-center gap-3 px-2 py-2 cursor-pointer hover:bg-slate-800 rounded-lg transition-colors"
           >
-            {/* LETRA INICIAL DINÂMICA */}
             <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold uppercase">
               {user?.username ? user.username.charAt(0) : '?'}
             </div>
             <div>
-              {/* NOME DE UTILIZADOR DINÂMICO */}
               <p className="text-sm font-medium text-white">{user?.username || 'A carregar...'}</p>
               <p className="text-xs text-slate-400">Inquilino</p>
             </div>
@@ -355,7 +383,7 @@ export default function PortalInquilino() {
               {filtered.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {filtered.map((listing) => (
-                    <PropertyCard key={listing.id} listing={listing} onApply={handleApply} />
+                    <PropertyCard key={listing.id} listing={listing} onApply={handleOpenCandidatura} />
                   ))}
                 </div>
               ) : (
@@ -412,6 +440,88 @@ export default function PortalInquilino() {
 
         </div>
       </main>
+
+      {/* ========================================== */}
+      {/* MODAL DE CANDIDATURA (SOBREPOSTO À PÁGINA) */}
+      {/* ========================================== */}
+      {isCandidaturaOpen && imovelCandidatura && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="bg-slate-50 border-b border-slate-200 p-5 flex justify-between items-center">
+              <div>
+                <h3 className="font-bold text-slate-900 text-lg">Candidatura Oficial</h3>
+                <p className="text-sm text-slate-500">{imovelCandidatura.title}</p>
+              </div>
+              <button onClick={() => setIsCandidaturaOpen(false)} className="text-slate-400 hover:text-slate-600 p-1">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              {candidaturaEnviada ? (
+                <div className="text-center py-10">
+                  <div className="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-5">
+                    <CheckCircle size={40} />
+                  </div>
+                  <h4 className="text-2xl font-bold text-slate-900 mb-2">Candidatura Submetida!</h4>
+                  <p className="text-slate-500 leading-relaxed max-w-md mx-auto">
+                    O senhorio <b>{imovelCandidatura.senhorio}</b> vai analisar o teu perfil. Se for aceite, o sistema irá gerar automaticamente o teu contrato de arrendamento!
+                  </p>
+                </div>
+              ) : (
+                <form onSubmit={submeterCandidatura} className="space-y-6">
+                  
+                  {/* Mensagem */}
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">1. Mensagem de Apresentação</label>
+                    <p className="text-xs text-slate-500 mb-2">Explica porque és o inquilino ideal para esta casa.</p>
+                    <textarea 
+                      required
+                      placeholder="Ex: Olá, chamo-me Maria, trabalho como engenheira de software e procuro uma casa tranquila..."
+                      className="w-full h-28 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm focus:border-sky-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 resize-none"
+                    ></textarea>
+                  </div>
+
+                  {/* Documentos */}
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">2. Documentos Comprovativos</label>
+                    <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:bg-slate-50 hover:border-sky-300 transition-colors cursor-pointer">
+                      <UploadCloud size={28} className="mx-auto text-sky-500 mb-2" />
+                      <p className="text-sm font-medium text-slate-700">Clica para enviar ficheiros</p>
+                      <p className="text-xs text-slate-400 mt-1">PDF, JPG ou PNG (Máx 10MB)</p>
+                    </div>
+                    
+                    <div className="mt-3 space-y-2">
+                      <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                        <FileText size={16} className="text-slate-400" />
+                        <span className="text-sm text-slate-600 flex-1">IRS_2023.pdf</span>
+                        <span className="text-xs font-bold text-green-500">Anexado</span>
+                      </div>
+                      <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                        <FileText size={16} className="text-slate-400" />
+                        <span className="text-sm text-slate-600 flex-1">Recibos_Vencimento.pdf</span>
+                        <span className="text-xs font-bold text-green-500">Anexado</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Submit */}
+                  <div className="pt-4 border-t border-slate-100">
+                    <button type="submit" className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-4 rounded-xl transition-all shadow-md text-lg">
+                      Confirmar e Enviar Candidatura
+                    </button>
+                    <p className="text-center text-xs text-slate-400 mt-3 flex items-center justify-center gap-1">
+                       Os teus documentos estão seguros e encriptados.
+                    </p>
+                  </div>
+
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
