@@ -5,12 +5,12 @@ import {
   MessageSquare, FileText, Wallet, Bell, Check, User 
 } from 'lucide-react';
 
-// Dados base agora usam "senderRole" em vez de "sender: me/them"
+// Dados de simulação base (caso não haja nada no LocalStorage)
 const conversasBase = [
   {
     id: 1,
     senhorio: 'Dinis G.',
-    inquilino: 'Maria Ferreira', // Adicionamos o nome do inquilino para o senhorio ver!
+    inquilino: 'Maria Ferreira', 
     imovel: 'Apartamento T2 com Varanda e Vista Rio',
     avatar: 'DG',
     unread: true,
@@ -26,6 +26,7 @@ const conversasBase = [
 export default function Mensagens() {
   const navigate = useNavigate();
   
+  // ESTADOS DO UTILIZADOR
   const [user, setUser] = useState<any>(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notificacoes, setNotificacoes] = useState([
@@ -93,14 +94,24 @@ export default function Mensagens() {
           <div className="w-8 h-8 bg-sky-500 rounded-lg flex items-center justify-center"><span className="font-bold text-xl">A</span></div>
           <span className="text-xl font-bold tracking-tight">ArrendAI</span>
         </div>
+        
         <nav className="flex-1 px-4 mt-4 space-y-1">
+          {/* MENU COMPLETO RESTAURADO AQUI */}
           <button onClick={() => navigate('/portalinquilino')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
             <Search size={20} /> <span className="font-medium text-sm">Pesquisar</span>
           </button>
+          <button onClick={() => navigate('/portalinquilino')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
+            <FileText size={20} /> <span className="font-medium text-sm">Minhas Candidaturas</span>
+          </button>
+          <button onClick={() => navigate('/portalinquilino')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
+            <Wallet size={20} /> <span className="font-medium text-sm">As Minhas Rendas</span>
+          </button>
+
           <div className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-sky-600 text-white transition-all mt-2 shadow-sm">
             <MessageSquare size={20} /> <span className="font-medium text-sm">Mensagens</span>
           </div>
         </nav>
+
         <div className="p-4 border-t border-slate-800">
           <div className="flex items-center gap-3 px-2 py-2">
             <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold uppercase">
@@ -180,7 +191,6 @@ export default function Mensagens() {
                   
                   <div className="flex-1 p-6 overflow-y-auto flex flex-col space-y-4">
                     {activeChat.history.map((msg: any, index: number) => (
-                      // AQUI É A MAGIA: Se for tenant (inquilino), fica à direita!
                       <div key={index} className={`flex ${msg.senderRole === 'tenant' ? 'justify-end' : 'justify-start'}`}>
                         <div className={`p-3 max-w-[75%] text-sm shadow-sm relative ${
                           msg.senderRole === 'tenant' 
