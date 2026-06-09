@@ -175,7 +175,7 @@ export default function PortalInquilino() {
 
   // Função para abrir o Modal de Candidatura
   const handleOpenCandidatura = (imovel: typeof listings[0]) => {
-    setImovelCandidatura(imovel);
+    setImovelCandidatura(imovel);Can
     setIsCandidaturaOpen(true);
     setCandidaturaEnviada(false);
   };
@@ -188,21 +188,22 @@ export default function PortalInquilino() {
     if (imovelCandidatura) {
        setAppliedIds((prev) => prev.includes(imovelCandidatura.id) ? prev : [...prev, imovelCandidatura.id]);
        
-       // CRIA A CONVERSA E GUARDA NO LOCALSTORAGE
+       // CRIA A CONVERSA COM SENDERROLE
        const novaConversa = {
          id: Date.now(),
          senhorio: imovelCandidatura.senhorio,
+         inquilino: user?.username || 'Inquilino Interessado', // Guardamos o nome de quem mandou
          imovel: imovelCandidatura.title,
          avatar: imovelCandidatura.senhorio.substring(0, 2).toUpperCase(),
-         unread: true,
+         unread: false,
          lastMessage: 'Candidatura submetida com sucesso.',
          time: 'Agora',
          history: [
-            { sender: 'them', text: `Olá, candidatei-me ao seu imóvel: ${imovelCandidatura.title}`, time: 'Agora' }
+            // A mensagem automática da candidatura usa senderRole: 'tenant'
+            { senderRole: 'tenant', text: `Olá! Acabei de me candidatar ao seu imóvel: ${imovelCandidatura.title}. Os meus documentos já seguiram em anexo.`, time: 'Agora' }
          ]
        };
        
-       // Vai buscar as conversas que já existem e adiciona a nova
        const conversasGuardadas = JSON.parse(localStorage.getItem('minhasConversas') || '[]');
        localStorage.setItem('minhasConversas', JSON.stringify([novaConversa, ...conversasGuardadas]));
     }
@@ -211,6 +212,7 @@ export default function PortalInquilino() {
       setIsCandidaturaOpen(false);
       setCandidaturaEnviada(false);
       setImovelCandidatura(null);
+      setActiveTab('Minhas Candidaturas');
     }, 3000);
   };
   const setFilter = (key: keyof Filters) => (value: string) =>
