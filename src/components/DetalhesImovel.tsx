@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MessageSquare, X, Send, UploadCloud, CheckCircle, FileText } from 'lucide-react';
 
 const todosImoveis = [
@@ -104,6 +104,8 @@ const todosImoveis = [
 export default function DetalhesImovel() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [user, setUser] = useState<any>(null);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mensagem, setMensagem] = useState('');
   const [enviado, setEnviado] = useState(false);
@@ -111,35 +113,95 @@ export default function DetalhesImovel() {
   const [isCandidaturaOpen, setIsCandidaturaOpen] = useState(false);
   const [candidaturaEnviada, setCandidaturaEnviada] = useState(false);
 
+  const imovel = todosImoveis.find(item => item.id === Number(id));
+
+  // Ir buscar o nome do Inquilino logado
+  useEffect(() => {
+    const carregarUtilizador = async () => {
+      const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+      if (token) {
+        try {
+          const res = await fetch('http://127.0.0.1:8000/api/users/me/', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const dados = await res.json();
+            setUser(dados);
+          }
+        } catch (e) {
+          console.error("Erro ao carregar utilizador:", e);
+        }
+      }
+    };
+    carregarUtilizador();
+  }, []);
+
   const submeterCandidatura = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simula o envio para o backend
     setCandidaturaEnviada(true);
+
+    // INTEGRAÇÃO: Criar conversa pela candidatura
+    if (imovel) {
+       const novaConversa = {
+         id: Date.now(),
+         senhorio: imovel.senhorio,
+         inquilino: user?.username || 'Inquilino Interessado',
+         imovel: imovel.title,
+         avatar: imovel.senhorio.substring(0, 2).toUpperCase(),
+         unread: false,
+         lastMessage: 'Candidatura submetida com sucesso.',
+         time: 'Agora',
+         history: [
+            { senderRole: 'tenant', text: `Olá! Acabei de me candidatar ao seu imóvel: ${imovel.title}. Os meus documentos já seguiram em anexo.`, time: 'Agora' }
+         ]
+       };
+       const conversasGuardadas = JSON.parse(localStorage.getItem('minhasConversas') || '[]');
+       localStorage.setItem('minhasConversas', JSON.stringify([novaConversa, ...conversasGuardadas]));
+    }
+
     setTimeout(() => {
       setIsCandidaturaOpen(false);
       setCandidaturaEnviada(false);
-      navigate('/portalinquilino'); // <-- CORRIGIDO AQUI
+      navigate('/portalinquilino'); 
     }, 3500);
   };
 
   const enviarMensagem = (e: React.FormEvent) => {
     e.preventDefault();
     setEnviado(true);
+
+    // INTEGRAÇÃO: Criar conversa pela Mensagem
+    if (imovel && mensagem.trim() !== '') {
+       const novaConversa = {
+         id: Date.now(),
+         senhorio: imovel.senhorio,
+         inquilino: user?.username || 'Inquilino Interessado',
+         imovel: imovel.title,
+         avatar: imovel.senhorio.substring(0, 2).toUpperCase(),
+         unread: false,
+         lastMessage: mensagem, // O texto que o Inquilino escreveu
+         time: 'Agora',
+         history: [
+            { senderRole: 'tenant', text: mensagem, time: 'Agora' }
+         ]
+       };
+       const conversasGuardadas = JSON.parse(localStorage.getItem('minhasConversas') || '[]');
+       localStorage.setItem('minhasConversas', JSON.stringify([novaConversa, ...conversasGuardadas]));
+    }
+
     setTimeout(() => {
       setIsModalOpen(false);
       setEnviado(false);
       setMensagem('');
     }, 2000);
   };
-  
-  const imovel = todosImoveis.find(item => item.id === Number(id));
 
   if (!imovel) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 font-sans">
         <h1 className="text-2xl font-bold text-slate-800 mb-4">Imóvel não encontrado</h1>
         <button 
-          onClick={() => navigate('/portalinquilino')} // <-- CORRIGIDO AQUI
+          onClick={() => navigate('/portalinquilino')}
           className="bg-sky-500 hover:bg-sky-600 text-white px-6 py-2 rounded-lg font-medium transition-colors"
         >
           Voltar ao Portal
@@ -154,10 +216,10 @@ export default function DetalhesImovel() {
       {/* Barra de navegação */}
       <header className="bg-white border-b border-gray-200 px-8 py-4 mb-8">
         <button 
-          onClick={() => navigate('/portalinquilino')} // <-- CORRIGIDO AQUI
-          className="flex items-center text-sm font-medium text-slate-500 hover:text-sky-500 transition-colors"
+          onClick={() => navigate(-1)} // Mudado para navigate(-1) para melhor usabilidade
+          className="flex items-center text-sm font-bold text-slate-500 hover:text-sky-500 transition-colors"
         >
-          Voltar à Pesquisa
+          ← Voltar à Pesquisa
         </button>
       </header>
 
@@ -279,7 +341,7 @@ export default function DetalhesImovel() {
 
         </div>
       </main>
-      
+
       {/* Modal Mensagem */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -371,7 +433,6 @@ export default function DetalhesImovel() {
                       <p className="text-xs text-slate-400 mt-1">PDF, JPG ou PNG (Máx 10MB)</p>
                     </div>
                     
-                    {/* Lista visual de ficheiros anexados  */}
                     <div className="mt-3 space-y-2">
                       <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100">
                         <FileText size={16} className="text-slate-400" />
@@ -402,6 +463,7 @@ export default function DetalhesImovel() {
           </div>
         </div>
       )}
+
     </div>
   );
 }
