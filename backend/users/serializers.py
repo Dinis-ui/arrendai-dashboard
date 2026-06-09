@@ -4,13 +4,23 @@ from tenancies.models import Document  # Importamos o modelo de documentos para 
 
 User = get_user_model()
 
-# 1. O TEU ORIGINAL: Para ver perfis normais (voltou para o seu lugar!)
+
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'nif', 'role', 'is_landlord_approved']
+     
+        read_only_fields = ['role', 'is_landlord_approved']
 
-# 2. O NOVO: Específico para criar contas novas com o PDF
+    def update(self, instance, validated_data):
+        # Atualiza apenas os campos permitidos se eles vierem no pedido (PATCH)
+        instance.username = validated_data.get('username', instance.username)
+        instance.email = validated_data.get('email', instance.email)
+        instance.nif = validated_data.get('nif', instance.nif)
+        instance.save()
+        return instance
+
+
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     # Avisamos o serializer que pode vir um ficheiro opcional chamado 'documento'
@@ -24,7 +34,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         # 1. Extraímos o documento enviado antes de criar o utilizador
         file_data = validated_data.pop('documento', None)
 
-        # 2. Criamos o utilizador manualmente
         user = User(
             username=validated_data['username'],
             email=validated_data.get('email', ''),
@@ -34,7 +43,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         user.set_password(validated_data['password'])
         user.save()
 
-        # 3. SE for senhorio e tiver enviado um PDF, guardamos automaticamente na tabela Documentos!
+       
         if user.role == 'landlord' and file_data:
             Document.objects.create(
                 tenant=user, 

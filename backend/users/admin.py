@@ -2,7 +2,10 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import User
 
-# Isto diz ao painel para mostrar a nossa tabela de Utilizadores
-admin.site.register(User, UserAdmin)
+class CustomUserAdmin(UserAdmin):
+    # Dizemos ao Django para adicionar uma nova secção no ecrã com os teus campos
+    fieldsets = UserAdmin.fieldsets + (
+        ('Campos ArrendAI (Personalizados)', {'fields': ('role', 'nif')}),
+    )
 
-# Register your models here.
+admin.site.register(User, CustomUserAdmin)

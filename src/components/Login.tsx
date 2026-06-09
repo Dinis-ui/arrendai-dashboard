@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom'; 
 
 export default function Login() {
@@ -9,6 +9,38 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate(); 
+
+  // <-- NOVO: VERIFICAÇÃO AUTOMÁTICA DE SESSÃO -->
+  useEffect(() => {
+    // Mal o login abre, verifica se já existe uma "chave" viva
+    const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+    
+    if (token) {
+      // Se já houver token, perguntamos ao backend qual é o cargo para o deixar entrar direto
+      fetch('http://127.0.0.1:8000/api/users/me/', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(res => {
+        if (res.ok) return res.json();
+        throw new Error('Token expirado');
+      })
+      .then(userData => {
+        // Sucesso! Utilizador já estava logado, salta o ecrã de login
+        if (userData.role === 'landlord') {
+          navigate('/dashboard-senhorio');
+        } else {
+          navigate('/portalinquilino');
+        }
+      })
+      .catch(() => {
+        // O token estava lá mas o Django disse que expirou. Limpar lixo.
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        sessionStorage.removeItem('accessToken');
+        sessionStorage.removeItem('refreshToken');
+      });
+    }
+  }, [navigate]);
 
   const fazerLogin = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { User, Mail, Phone, LogOut, ArrowLeft, X } from 'lucide-react';
 
 interface PerfilProps {
-  onBack?: () => void; // Tornamos opcional, pois agora usamos o navigate interno
+  onBack?: () => void;
 }
 
 export default function PerfilInquilino({ onBack }: PerfilProps) {
@@ -86,9 +86,14 @@ export default function PerfilInquilino({ onBack }: PerfilProps) {
   };
 
   const terminarSessao = () => {
+    // ATENÇÃO AQUI: Limpar tanto o localStorage como o sessionStorage
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('role_teste');
+    
+    sessionStorage.removeItem('accessToken');
+    sessionStorage.removeItem('refreshToken');
+    
     navigate('/login');
   };
 
@@ -103,7 +108,6 @@ export default function PerfilInquilino({ onBack }: PerfilProps) {
       <header className="bg-white border-b border-gray-200 px-8 py-6 mb-8 sticky top-0 z-10 shadow-sm">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <button 
-            // CORRIGIDO AQUI: Volta sempre para a página anterior, independentemente do cargo!
             onClick={() => navigate(-1)}
             className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-sky-600 transition-colors bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 hover:border-sky-200"
           >
@@ -125,7 +129,6 @@ export default function PerfilInquilino({ onBack }: PerfilProps) {
                 {user?.username ? user?.username.charAt(0) : '?'}
               </div>
               <h2 className="text-2xl font-bold text-slate-900">{user?.username}</h2>
-              {/* O cargo deve vir da BD, mostramos Inquilino como default se o campo role não existir */}
               <p className="text-slate-500 font-medium text-sm mb-6 capitalize">
                 {user?.role === 'landlord' ? 'Senhorio' : 'Inquilino'}
               </p>

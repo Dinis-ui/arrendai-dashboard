@@ -94,8 +94,14 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
   };
 
   const terminarSessao = () => {
+    // ATENÇÃO AQUI: Limpar tanto o localStorage como o sessionStorage
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
+    localStorage.removeItem('role_teste');
+    
+    sessionStorage.removeItem('accessToken');
+    sessionStorage.removeItem('refreshToken');
+    
     navigate('/login');
   };
 
