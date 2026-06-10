@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { 
   Plus, 
   MoreVertical, 
@@ -26,22 +26,29 @@ const dadosIniciais = [
 
 export default function Anuncios() {
 
- 
+  // LER DO LOCAL STORAGE (Assim vê os anúncios criados nas Propriedades!)
+  const carregarAnunciosIniciais = () => {
+    const guardados = localStorage.getItem('meusAnuncios');
+    return guardados ? JSON.parse(guardados) : dadosIniciais;
+  };
+
   // ESTADOS 
-  // Agora os anúncios são um estado, para podermos apagar e editar!
-  const [anuncios, setAnuncios] = useState(dadosIniciais);
+  const [anuncios, setAnuncios] = useState<any[]>(carregarAnunciosIniciais());
   
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [toastMsg, setToastMsg] = useState(''); // Mensagem dinâmica para o aviso verde
+  const [toastMsg, setToastMsg] = useState(''); 
   const [menuAberto, setMenuAberto] = useState<number | null>(null);
   
-  // Estado para saber qual anúncio estamos a editar (se for null, é um anúncio novo)
   const [anuncioSendoEditado, setAnuncioSendoEditado] = useState<any>(null);
 
   // Upload de fotos
   const [fotos, setFotos] = useState<{file: File, preview: string}[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Sincroniza sempre que a aba é aberta (caso tenham vindo da aba Propriedades)
+  useEffect(() => {
+    setAnuncios(carregarAnunciosIniciais());
+  }, []);
   
   // Mostrar Aviso
   const mostrarAviso = (mensagem: string) => {
@@ -49,40 +56,50 @@ export default function Anuncios() {
     setTimeout(() => setToastMsg(''), 3000);
   };
 
+  // Atualizar a lista de anúncios no State e no LocalStorage
+  const atualizarAnuncios = (novaLista: any[]) => {
+    setAnuncios(novaLista);
+    localStorage.setItem('meusAnuncios', JSON.stringify(novaLista));
+  };
+
   // Apagar Anúncio
   const handleApagar = (id: number) => {
-    setAnuncios(anuncios.filter(anuncio => anuncio.id !== id));
+    const novaLista = anuncios.filter(anuncio => anuncio.id !== id);
+    atualizarAnuncios(novaLista);
     setMenuAberto(null);
     mostrarAviso('Anúncio apagado com sucesso.');
   };
 
   // Pausar Anúncio
   const handlePausar = (id: number) => {
-    setAnuncios(anuncios.map(anuncio => {
+    const novaLista = anuncios.map(anuncio => {
       if (anuncio.id === id) {
-        const isPausado = anuncio.estado === 'Pausado';
+        // Compatibilidade com "status" (das propriedades) ou "estado" (dos anúncios)
+        const estadoAtual = anuncio.estado || anuncio.status;
+        const isPausado = estadoAtual === 'Pausado';
         return {
           ...anuncio,
           estado: isPausado ? 'Em Revisão' : 'Pausado',
+          status: isPausado ? 'Em Revisão' : 'Pausado', // Atualiza os dois para garantir
           cor: isPausado ? 'text-amber-600 bg-amber-50' : 'text-slate-600 bg-slate-100'
         };
       }
       return anuncio;
-    }));
+    });
+    atualizarAnuncios(novaLista);
     setMenuAberto(null);
     mostrarAviso('Estado do anúncio atualizado.');
   };
 
   // Editar Anúncio
   const handleEditar = (anuncio: any) => {
-    setAnuncioSendoEditado(anuncio); // Guarda os dados do anúncio a editar
-    setIsModalOpen(true); // Abre a janela
-    setMenuAberto(null); // Fecha o menu dos 3 pontinhos
+    setAnuncioSendoEditado(anuncio); 
+    setIsModalOpen(true); 
+    setMenuAberto(null); 
   };
 
   // Ver Anúncio
   const handleVerAnuncio = () => {
-    // Como não temos página pública desenhada, apenas mostramos um aviso simulado
     setMenuAberto(null);
     mostrarAviso('A redirecionar para a página pública...');
   };
@@ -94,17 +111,47 @@ export default function Anuncios() {
     setFotos([]);
   };
 
-  // Guardar o Formulário 
-  const handlePublish = () => {
-    fecharModal();
+  // GUARDAR O FORMULÁRIO (CRIAR/EDITAR)
+  const handlePublish = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    
+    // Apanhar os valores dos inputs pelo "name"
+    const titulo = formData.get('titulo') as string;
+    const tipo = formData.get('tipo') as string;
+    const precoBruto = formData.get('preco') as string;
+    const precoFormatado = precoBruto.includes('€') ? precoBruto : `${precoBruto}€`;
+
+    let novaLista;
+
     if (anuncioSendoEditado) {
+      // EDITAR
+      novaLista = anuncios.map(a => a.id === anuncioSendoEditado.id 
+        ? { ...a, titulo: titulo, title: titulo, tipo: tipo, preco: precoFormatado, price: precoFormatado } 
+        : a
+      );
       mostrarAviso('Anúncio atualizado com sucesso!');
     } else {
+      // NOVO ANÚNCIO
+      const novoAnuncio = {
+        id: Date.now(),
+        titulo: titulo,
+        title: titulo, // Guardamos nos dois formatos para ser compatível com as outras páginas
+        tipo: tipo,
+        estado: 'Em Revisão',
+        status: 'Em Revisão',
+        preco: precoFormatado,
+        price: precoFormatado,
+        cor: 'text-amber-600 bg-amber-50'
+      };
+      novaLista = [novoAnuncio, ...anuncios];
       mostrarAviso('Novo anúncio submetido para revisão!');
     }
+
+    atualizarAnuncios(novaLista);
+    fecharModal();
   };
 
- 
   // Funcões de fotos
   const handleDivClick = () => fileInputRef.current?.click();
 
@@ -162,71 +209,81 @@ export default function Anuncios() {
             {anuncios.length === 0 ? (
               <tr>
                 <td colSpan={4} className="px-6 py-12 text-center text-slate-500">
-                  Nenhum anúncio encontrado.
+                  Nenhum anúncio encontrado. Crie um novo!
                 </td>
               </tr>
             ) : (
-              anuncios.map((anuncio) => (
-                <tr key={anuncio.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-6 py-5">
-                    <p className="font-bold text-slate-800">{anuncio.titulo}</p>
-                    <p className="text-xs text-slate-400">{anuncio.tipo}</p>
-                  </td>
-                  <td className="px-6 py-5">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border border-current/10 ${anuncio.cor}`}>
-                      {anuncio.estado === 'Ativo' && <CheckCircle2 size={14} />}
-                      {anuncio.estado === 'Em Revisão' && <Clock size={14} />}
-                      {anuncio.estado === 'Rejeitado' && <XCircle size={14} />}
-                      {anuncio.estado === 'Pausado' && <PauseCircle size={14} />}
-                      {anuncio.estado}
-                    </span>
-                  </td>
-                  <td className="px-6 py-5 font-bold text-slate-700">{anuncio.preco}</td>
-                  
-                  {/* COLUNA DAS AÇÕES */}
-                  <td className="px-6 py-5 text-right relative">
-                    <button 
-                      onClick={() => toggleMenu(anuncio.id)}
-                      className={`p-2 rounded-lg transition-colors ${menuAberto === anuncio.id ? 'bg-slate-100 text-slate-800' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}
-                    >
-                      <MoreVertical size={20} />
-                    </button>
+              anuncios.map((anuncio) => {
+                // Compatibilidade entre os dados iniciais e os vindos de "Propriedades"
+                const tituloExibicao = anuncio.titulo || anuncio.title;
+                const estadoExibicao = anuncio.estado || anuncio.status || 'Ativo';
+                let precoExibicao = anuncio.preco || anuncio.price;
+                if (!String(precoExibicao).includes('€')) precoExibicao = `${precoExibicao}€`;
+                
+                const corExibicao = anuncio.cor || (estadoExibicao === 'Ativo' ? 'text-green-600 bg-green-50' : 'text-sky-600 bg-sky-50');
 
-                    {/* MENU DROPDOWN */}
-                    {menuAberto === anuncio.id && (
-                      <div className="absolute right-12 top-10 w-48 bg-white rounded-2xl shadow-xl border border-slate-200 py-2 z-50 animate-in fade-in zoom-in-95">
-                        <button onClick={handleVerAnuncio} className="w-full px-4 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors">
-                          <Eye size={16} className="text-slate-400" /> Ver Anúncio
-                        </button>
-                        <button onClick={() => handleEditar(anuncio)} className="w-full px-4 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors">
-                          <Edit2 size={16} className="text-sky-500" /> Editar Anúncio
-                        </button>
-                        <button onClick={() => handlePausar(anuncio.id)} className="w-full px-4 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors">
-                          <PauseCircle size={16} className="text-amber-500" /> 
-                          {anuncio.estado === 'Pausado' ? 'Retomar Anúncio' : 'Pausar Anúncio'}
-                        </button>
-                        <div className="h-px bg-slate-100 my-1 mx-2"></div>
-                        <button onClick={() => handleApagar(anuncio.id)} className="w-full px-4 py-2.5 text-left text-sm font-semibold text-red-600 hover:bg-red-50 flex items-center gap-3 transition-colors">
-                          <Trash2 size={16} className="text-red-500" /> Apagar
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))
+                return (
+                  <tr key={anuncio.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-5">
+                      <p className="font-bold text-slate-800">{tituloExibicao}</p>
+                      <p className="text-xs text-slate-400">{anuncio.tipo || 'Imóvel'}</p>
+                    </td>
+                    <td className="px-6 py-5">
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border border-current/10 ${corExibicao}`}>
+                        {estadoExibicao === 'Ativo' && <CheckCircle2 size={14} />}
+                        {estadoExibicao === 'Em Revisão' && <Clock size={14} />}
+                        {estadoExibicao === 'Rejeitado' && <XCircle size={14} />}
+                        {estadoExibicao === 'Pausado' && <PauseCircle size={14} />}
+                        {estadoExibicao}
+                      </span>
+                    </td>
+                    <td className="px-6 py-5 font-bold text-slate-700">{precoExibicao}</td>
+                    
+                    {/* COLUNA DAS AÇÕES */}
+                    <td className="px-6 py-5 text-right relative">
+                      <button 
+                        onClick={() => toggleMenu(anuncio.id)}
+                        className={`p-2 rounded-lg transition-colors ${menuAberto === anuncio.id ? 'bg-slate-100 text-slate-800' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}
+                      >
+                        <MoreVertical size={20} />
+                      </button>
+
+                      {/* MENU DROPDOWN */}
+                      {menuAberto === anuncio.id && (
+                        <div className="absolute right-12 top-10 w-48 bg-white rounded-2xl shadow-xl border border-slate-200 py-2 z-50 animate-in fade-in zoom-in-95">
+                          <button onClick={handleVerAnuncio} className="w-full px-4 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors">
+                            <Eye size={16} className="text-slate-400" /> Ver Anúncio
+                          </button>
+                          <button onClick={() => handleEditar(anuncio)} className="w-full px-4 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors">
+                            <Edit2 size={16} className="text-sky-500" /> Editar Anúncio
+                          </button>
+                          <button onClick={() => handlePausar(anuncio.id)} className="w-full px-4 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors">
+                            <PauseCircle size={16} className="text-amber-500" /> 
+                            {estadoExibicao === 'Pausado' ? 'Retomar Anúncio' : 'Pausar Anúncio'}
+                          </button>
+                          <div className="h-px bg-slate-100 my-1 mx-2"></div>
+                          <button onClick={() => handleApagar(anuncio.id)} className="w-full px-4 py-2.5 text-left text-sm font-semibold text-red-600 hover:bg-red-50 flex items-center gap-3 transition-colors">
+                            <Trash2 size={16} className="text-red-500" /> Apagar
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
       </div>
 
       
-      {/* Criar OU Editar */}
+      {/* MODAL: Criar OU Editar -> AGORA É UM FORMULÁRIO */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl">
+          <form onSubmit={handlePublish} className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
             
             {/* Header do Modal */}
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white shrink-0">
               <div>
                 <h3 className="font-black text-xl text-slate-800 uppercase tracking-tight">
                   {anuncioSendoEditado ? 'Editar Anúncio' : 'Publicar Novo Anúncio'}
@@ -235,13 +292,13 @@ export default function Anuncios() {
                   {anuncioSendoEditado ? 'Atualize os dados e guarde as alterações.' : 'Preencha os dados para submeter à equipa de moderação.'}
                 </p>
               </div>
-              <button onClick={fecharModal} className="text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-full transition-colors">
+              <button type="button" onClick={fecharModal} className="text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-full transition-colors">
                 <X size={20} />
               </button>
             </div>
 
             {/* Corpo do Formulário */}
-            <div className="p-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
+            <div className="p-8 overflow-y-auto custom-scrollbar flex-1">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 
                 <div className="md:col-span-2 space-y-2">
@@ -250,7 +307,9 @@ export default function Anuncios() {
                     <FileText className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                     <input 
                       type="text" 
-                      defaultValue={anuncioSendoEditado ? anuncioSendoEditado.titulo : ''}
+                      name="titulo"
+                      required
+                      defaultValue={anuncioSendoEditado ? (anuncioSendoEditado.titulo || anuncioSendoEditado.title) : ''}
                       placeholder="Ex: T2 Moderno no Chiado com Varanda" 
                       className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 text-sm focus:ring-2 focus:ring-sky-500 focus:bg-white outline-none transition-all" 
                     />
@@ -262,6 +321,7 @@ export default function Anuncios() {
                   <div className="relative">
                     <Home className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                     <select 
+                      name="tipo"
                       defaultValue={anuncioSendoEditado ? anuncioSendoEditado.tipo : 'Apartamento Inteiro'}
                       className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 text-sm appearance-none focus:ring-2 focus:ring-sky-500 outline-none cursor-pointer"
                     >
@@ -279,7 +339,9 @@ export default function Anuncios() {
                     <Banknote className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                     <input 
                       type="number" 
-                      defaultValue={anuncioSendoEditado ? anuncioSendoEditado.preco.replace('€', '') : ''}
+                      name="preco"
+                      required
+                      defaultValue={anuncioSendoEditado ? String(anuncioSendoEditado.preco || anuncioSendoEditado.price).replace('€', '') : ''}
                       placeholder="0.00" 
                       className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 text-sm focus:ring-2 focus:ring-sky-500 outline-none transition-all" 
                     />
@@ -290,7 +352,7 @@ export default function Anuncios() {
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Localização Exata</label>
                   <div className="relative">
                     <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input type="text" placeholder="Rua, Número, Código Postal e Cidade" className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 text-sm focus:ring-2 focus:ring-sky-500 outline-none transition-all" />
+                    <input type="text" name="localizacao" placeholder="Rua, Número, Código Postal e Cidade" className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 text-sm focus:ring-2 focus:ring-sky-500 outline-none transition-all" />
                   </div>
                 </div>
 
@@ -312,7 +374,7 @@ export default function Anuncios() {
                       {fotos.map((foto, index) => (
                         <div key={index} className="relative group rounded-xl overflow-hidden border border-slate-200 h-24 bg-slate-100 flex items-center justify-center">
                           <img src={foto.preview} alt={`Preview ${index}`} className="w-full h-full object-cover" />
-                          <button onClick={(e) => { e.stopPropagation(); removeFoto(index); }} className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button type="button" onClick={(e) => { e.stopPropagation(); removeFoto(index); }} className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                             <div className="bg-red-500 text-white p-1.5 rounded-full shadow-lg"><X size={16} /></div>
                           </button>
                         </div>
@@ -325,14 +387,14 @@ export default function Anuncios() {
             </div>
 
             {/* Ações do Modal */}
-            <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50/50">
-              <button onClick={fecharModal} className="px-6 py-3 text-sm font-bold text-slate-500 hover:text-slate-700 transition-colors">Cancelar</button>
-              <button onClick={handlePublish} className="px-8 py-3 text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-2xl transition-all shadow-lg shadow-sky-600/20">
+            <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50/50 shrink-0">
+              <button type="button" onClick={fecharModal} className="px-6 py-3 text-sm font-bold text-slate-500 hover:text-slate-700 transition-colors">Cancelar</button>
+              <button type="submit" className="px-8 py-3 text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-2xl transition-all shadow-lg shadow-sky-600/20">
                 {anuncioSendoEditado ? 'Guardar Alterações' : 'Publicar Anúncio'}
               </button>
             </div>
 
-          </div>
+          </form>
         </div>
       )}
 

@@ -42,7 +42,13 @@ const propriedadesData = [
   }
 ];
 
-export default function Propriedades() {
+// 1. ADICIONAMOS A INTERFACE PARA RECEBER A FUNÇÃO DO PAI
+interface PropriedadesProps {
+  onMudarParaAnuncios?: () => void;
+}
+
+// 2. RECEBEMOS A FUNÇÃO NO COMPONENTE
+export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps) {
   const [propriedadeSelecionadaId, setPropriedadeSelecionadaId] = useState<number | null>(null);
   
   // Estado Editar Propriedade
@@ -60,13 +66,48 @@ export default function Propriedades() {
     setTimeout(() => setShowSuccessToast(false), 3000);
   };
   
-  // NOVO: Submeter Novo Anúncio
-  const handleCriarAnuncio = (e: React.FormEvent) => {
+  // 3. ATUALIZAMOS A FUNÇÃO DE CRIAR ANÚNCIO
+  // NOVO: Submeter Novo Anúncio e Guardar no LocalStorage em Revisão
+  const handleCriarAnuncio = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSucessoAnuncio(true);
+    
+    // 1. Apanhar os dados que o Senhorio preencheu no formulário
+    const formData = new FormData(e.currentTarget);
+    const propInfo = propriedadesData.find(p => p.id === propriedadeSelecionadaId);
+
+    // 2. Guardar no LocalStorage com o estado "Em Revisão"
+    if (propInfo) {
+      const novoAnuncio = {
+        id: Date.now(),
+        titulo: formData.get('titulo'),
+        title: formData.get('titulo'), // Duplicado para compatibilidade
+        preco: `${Number(formData.get('preco'))}€`,
+        price: `${Number(formData.get('preco'))}€`, // Duplicado para compatibilidade
+        location: propInfo.morada,
+        area: propInfo.area,
+        tipo: 'Apartamento Inteiro', 
+        estado: 'Em Revisão', // <--- CORRIGIDO AQUI
+        status: 'Em Revisão', // <--- CORRIGIDO AQUI
+        cor: 'text-amber-600 bg-amber-50', // Cor laranja da revisão
+        views: 0,
+        candidates: 0,
+        photo: propInfo.imagem
+      };
+
+      const anunciosGuardados = JSON.parse(localStorage.getItem('meusAnuncios') || '[]');
+      localStorage.setItem('meusAnuncios', JSON.stringify([novoAnuncio, ...anunciosGuardados]));
+    }
+    
+    // Passados 2 segundos da animação de sucesso...
     setTimeout(() => {
       setSucessoAnuncio(false);
       setAbrirModalAnuncio(false);
+      
+      // ...Muda automaticamente para a aba dos Anúncios!
+      if (onMudarParaAnuncios) {
+        onMudarParaAnuncios();
+      }
     }, 2000);
   };
   
@@ -328,6 +369,7 @@ export default function Propriedades() {
                       </label>
                       <input 
                         type="text" 
+                        name="titulo"
                         required
                         defaultValue={`Fantástico apartamento em ${prop.morada}`}
                         className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:border-sky-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20"
@@ -342,6 +384,7 @@ export default function Propriedades() {
                         </label>
                         <input 
                           type="number" 
+                          name="preco"
                           required
                           defaultValue={prop.preco}
                           className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:border-sky-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 font-bold text-sky-700"

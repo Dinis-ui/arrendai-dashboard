@@ -19,9 +19,8 @@ const menuItems = [
 
 export default function DashboardSenhorio() {
   const [activeTab, setActiveTab] = useState('Anúncios');
-  const [user, setUser] = useState<any>(null); // Estado para guardar os dados reais
+  const [user, setUser] = useState<any>(null); 
   
-  // Lógica para carregar os dados do utilizador autenticado
   useEffect(() => {
     const carregarDados = async () => {
      const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
@@ -40,7 +39,6 @@ export default function DashboardSenhorio() {
     carregarDados();
   }, []);
 
-  // NOTIFICAÇÕES
   const [showNotifications, setShowNotifications] = useState(false);
   const [notificacoes, setNotificacoes] = useState([
     { id: 1, titulo: 'Nova Candidatura', desc: 'Ana Martins candidatou-se ao Quarto em Entrecampos.', tempo: 'Há 5 min', lida: false },
@@ -57,7 +55,8 @@ export default function DashboardSenhorio() {
   const renderContent = () => {
     switch (activeTab) {
       case 'Anúncios': return <Anuncios />;
-      case 'Propriedades': return <Propriedades />;
+      // AQUI ESTÁ A MAGIA: Passamos uma função para a Propriedade usar!
+      case 'Propriedades': return <Propriedades onMudarParaAnuncios={() => setActiveTab('Anúncios')} />;
       case 'Candidaturas': return <PainelCandidaturas />;
       case 'Rendas': return <PainelRendas />;
       case 'Mensagens': return <PainelMensagens />;
