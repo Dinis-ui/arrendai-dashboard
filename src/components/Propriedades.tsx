@@ -2,10 +2,9 @@ import { useState } from 'react';
 import { 
   Building2, MapPin, ArrowLeft, Home, Banknote, Users, PenSquare,
   ImageIcon, X, CheckCircle2, Megaphone, Euro, FileText,
-  Mail, Phone, Briefcase, Star, Calendar, ChevronLeft, ChevronRight
+  Mail, Phone, Briefcase, Star, Calendar, ChevronLeft, ChevronRight, Plus // <-- Adicionado o Plus aqui!
 } from 'lucide-react';
 
-// Dados iniciais (Mudámos o nome para servir de base ao useState)
 const dadosIniciaisPropriedades = [
   { 
     id: 1, 
@@ -59,39 +58,71 @@ interface PropriedadesProps {
 }
 
 export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps) {
-  // CRIAÇÃO DO ESTADO DINÂMICO DAS PROPRIEDADES
   const [propriedades, setPropriedades] = useState(dadosIniciaisPropriedades);
   const [propriedadeSelecionadaId, setPropriedadeSelecionadaId] = useState<number | null>(null);
   
   // Estados dos Modais
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false); // NOVO ESTADO: Adicionar Propriedade
   const [abrirModalAnuncio, setAbrirModalAnuncio] = useState(false);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [isTenantProfileOpen, setIsTenantProfileOpen] = useState(false);
   
   // Outros Estados
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState(''); // Dinamizar a mensagem do toast
   const [sucessoAnuncio, setSucessoAnuncio] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // LÓGICA DO BOTÃO "CRIAR NOVA PROPRIEDADE"
+  const handleAddProperty = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    
+    const novoEstado = formData.get('estado') as string;
+    let novaCor = 'bg-slate-50 text-slate-700';
+    if (novoEstado === 'Alugado') novaCor = 'bg-green-50 text-green-700';
+    if (novoEstado === 'Vazio') novaCor = 'bg-amber-50 text-amber-700';
+    if (novoEstado === 'Em Obras') novaCor = 'bg-red-50 text-red-700';
+
+    const novaPropriedade = {
+      id: Date.now(),
+      morada: formData.get('morada') as string,
+      area: Number(formData.get('area')),
+      preco: Number(formData.get('preco')),
+      estado: novoEstado,
+      cor: novaCor,
+      inquilino: novoEstado === 'Alugado' ? 'Novo Inquilino' : null,
+      contratoInicio: novoEstado === 'Alugado' ? 'Hoje' : '-',
+      contratoFim: novoEstado === 'Alugado' ? 'Em 1 ano' : '-',
+      // Dá uma imagem bonita e genérica por defeito
+      imagem: 'https://images.pexels.com/photos/439391/pexels-photo-439391.jpeg?auto=compress&cs=tinysrgb&w=1200', 
+      galeria: ['https://images.pexels.com/photos/439391/pexels-photo-439391.jpeg?auto=compress&cs=tinysrgb&w=1200'],
+      perfilInquilino: null
+    };
+
+    setPropriedades([novaPropriedade, ...propriedades]);
+    setIsAddModalOpen(false);
+    setToastMessage('Nova propriedade adicionada com sucesso!');
+    setShowSuccessToast(true);
+    setTimeout(() => setShowSuccessToast(false), 3000);
+  };
 
   // LÓGICA DO BOTÃO "GUARDAR ALTERAÇÕES"
   const handleSaveEdit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
-    // Pegar nos novos valores que foram escritos no formulário
     const novaMorada = formData.get('morada') as string;
     const novaArea = Number(formData.get('area'));
     const novoPreco = Number(formData.get('preco'));
     const novoEstado = formData.get('estado') as string;
 
-    // Definir as cores automáticas conforme o estado selecionado
     let novaCor = 'bg-slate-50 text-slate-700';
     if (novoEstado === 'Alugado') novaCor = 'bg-green-50 text-green-700';
     if (novoEstado === 'Vazio') novaCor = 'bg-amber-50 text-amber-700';
     if (novoEstado === 'Em Obras') novaCor = 'bg-red-50 text-red-700';
 
-    // Mapear o array e atualizar apenas a propriedade que está ativa
     const propriedadesAtualizadas = propriedades.map((p) => {
       if (p.id === propriedadeSelecionadaId) {
         return {
@@ -101,16 +132,15 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
           preco: novoPreco,
           estado: novoEstado,
           cor: novaCor,
-          // Se mudou para Vazio, limpa o inquilino da pré-visualização
           inquilino: novoEstado === 'Alugado' ? p.inquilino || 'Novo Inquilino' : null
         };
       }
       return p;
     });
 
-    // Guardar no estado para atualizar o ecrã instantaneamente
     setPropriedades(propriedadesAtualizadas);
     setIsEditModalOpen(false);
+    setToastMessage('As alterações foram guardadas com sucesso.');
     setShowSuccessToast(true);
     setTimeout(() => setShowSuccessToast(false), 3000);
   };
@@ -160,7 +190,9 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
     setCurrentImageIndex((prev) => (prev === 0 ? galeria.length - 1 : prev - 1));
   };
   
-  // Detalhes da propriedade ativa
+  // ==========================================
+  // VISTA: DETALHES DE UMA PROPRIEDADE
+  // ==========================================
   if (propriedadeSelecionadaId !== null) {
     const prop = propriedades.find(p => p.id === propriedadeSelecionadaId);
     if (!prop) return null;
@@ -190,7 +222,6 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
             </div>
           </div>
           
-          {/* BOTÃO 1: EDITAR PROPRIEDADE */}
           <button 
             onClick={() => setIsEditModalOpen(true)}
             className="flex items-center gap-2 bg-white border border-slate-200 hover:border-sky-500 hover:text-sky-600 text-slate-700 px-4 py-2 rounded-xl text-sm font-bold transition-colors shadow-sm"
@@ -205,7 +236,6 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
           <img src={prop.imagem} alt={`Foto de ${prop.morada}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 via-transparent to-transparent"></div>
           
-          {/* BOTÃO 2: VER GALERIA */}
           <button 
             onClick={() => {
               setCurrentImageIndex(0);
@@ -253,17 +283,22 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Inquilino Atual</label>
                   
-                  {/* BOTÃO 3: VER PERFIL DO INQUILINO */}
                   <div 
-                    onClick={() => setIsTenantProfileOpen(true)}
-                    className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl p-4 cursor-pointer hover:border-sky-300 hover:bg-sky-50 transition-colors group"
+                    onClick={() => {
+                      if(prop.perfilInquilino) setIsTenantProfileOpen(true);
+                    }}
+                    className={`flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-4 transition-colors group ${prop.perfilInquilino ? 'cursor-pointer hover:border-sky-300 hover:bg-sky-50' : ''}`}
                   >
                     <div className="w-12 h-12 rounded-full bg-sky-200 flex items-center justify-center text-sky-800 font-bold text-lg shadow-inner group-hover:scale-105 transition-transform">
                       {prop.inquilino?.substring(0, 2).toUpperCase()}
                     </div>
                     <div>
                       <span className="block text-sm font-bold text-slate-800 group-hover:text-sky-700">{prop.inquilino}</span>
-                      <span className="text-xs text-sky-600 font-medium mt-0.5">Ver Perfil Completo &rarr;</span>
+                      {prop.perfilInquilino ? (
+                        <span className="text-xs text-sky-600 font-medium mt-0.5">Ver Perfil Completo &rarr;</span>
+                      ) : (
+                         <span className="text-xs text-slate-400 font-medium mt-0.5">Sem perfil registado</span>
+                      )}
                     </div>
                   </div>
 
@@ -283,7 +318,7 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
             ) : (
               <div className="text-center flex-1 flex flex-col items-center justify-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 p-6">
                 <Users size={32} className="mx-auto text-slate-300 mb-3" />
-                <p className="font-bold text-slate-600">Unidade Vazia</p>
+                <p className="font-bold text-slate-600">Unidade {prop.estado}</p>
                 <p className="text-sm text-slate-400 mb-4 max-w-sm mx-auto">Ainda não tens nenhum contrato ativo para esta propriedade.</p>
                 <button 
                   onClick={() => setAbrirModalAnuncio(true)}
@@ -296,10 +331,9 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
           </div>
         </div>
 
-        {/* MODAL 1: FORMULÁRIO DE EDIÇÃO REAL */}
+        {/* MODAL 1: FORMULÁRIO DE EDIÇÃO */}
         {isEditModalOpen && (
           <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-            {/* Transformado em <form> legítimo para ler os valores ao submeter */}
             <form onSubmit={handleSaveEdit} className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl">
               <div className="p-6 border-b border-slate-100 flex justify-between items-center">
                 <h3 className="font-bold text-lg text-slate-800">Editar Propriedade</h3>
@@ -416,7 +450,7 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
           </div>
         )}
 
-        {/* MODAL 4: CRIAR ANÚNCIO */}
+        {/* MODAL 4: CRIAR ANÚNCIO (MANTIDO) */}
         {abrirModalAnuncio && (
            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
              <div className="bg-white rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col">
@@ -460,29 +494,30 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
            </div>
         )}
 
-        {/* Aviso Sucesso */}
-        {showSuccessToast && (
-          <div className="fixed bottom-10 right-10 bg-emerald-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 z-50 animate-in fade-in slide-in-from-bottom-6">
-            <div className="bg-white/20 p-2 rounded-full"><CheckCircle2 size={24} className="text-white" /></div>
-            <div>
-              <p className="font-bold text-sm">Propriedade atualizada!</p>
-              <p className="text-xs text-emerald-100 mt-0.5">As alterações foram salvas e renderizadas.</p>
-            </div>
-            <button onClick={() => setShowSuccessToast(false)} className="ml-4 text-emerald-200 hover:text-white"><X size={18} /></button>
-          </div>
-        )}
       </div>
     );
   }
 
-  // LISTAGEM GERAL DAS PROPRIEDADES (Lê do estado "propriedades")
+  // ==========================================
+  // VISTA: LISTAGEM GERAL DAS PROPRIEDADES
+  // ==========================================
   return (
     <div className="animate-in fade-in duration-500 relative pb-10">
+      
+      {/* HEADER DA LISTAGEM COM O BOTÃO NOVO */}
       <div className="flex justify-between items-center mb-8">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">As Minhas Propriedades</h2>
           <p className="text-sm text-slate-500">Gere as tuas unidades físicas e ocupação.</p>
         </div>
+        
+        {/* BOTÃO ADICIONAR PROPRIEDADE AQUI! */}
+        <button 
+          onClick={() => setIsAddModalOpen(true)}
+          className="flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-sky-600/20"
+        >
+          <Plus size={20} /> Nova Propriedade
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -509,6 +544,60 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
           </div>
         ))}
       </div>
+
+      {/* MODAL 5: ADICIONAR NOVA PROPRIEDADE */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <form onSubmit={handleAddProperty} className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="font-bold text-lg text-slate-800">Nova Propriedade</h3>
+              <button type="button" onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-full transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-6 space-y-5">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Morada</label>
+                <input type="text" name="morada" required placeholder="Rua, Número, Localidade" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 focus:border-sky-500 outline-none" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Área (m²)</label>
+                  <input type="number" name="area" required placeholder="0" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 focus:border-sky-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Valor Estimado (€)</label>
+                  <input type="number" name="preco" required placeholder="0" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 focus:border-sky-500 outline-none" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Estado</label>
+                <select name="estado" defaultValue="Vazio" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 focus:border-sky-500 outline-none cursor-pointer">
+                  <option value="Vazio">Vazio (Pronto a anunciar)</option>
+                  <option value="Em Obras">Em Obras</option>
+                  <option value="Alugado">Alugado (Já com inquilino)</option>
+                </select>
+              </div>
+            </div>
+            <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50/50">
+              <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
+              <button type="submit" className="px-6 py-2.5 text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition-colors shadow-md shadow-sky-600/20">Criar Propriedade</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* AVISO DE SUCESSO GLOBAL (Serve para Adicionar e Editar) */}
+      {showSuccessToast && (
+        <div className="fixed bottom-10 right-10 bg-emerald-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 z-50 animate-in fade-in slide-in-from-bottom-6">
+          <div className="bg-white/20 p-2 rounded-full"><CheckCircle2 size={24} className="text-white" /></div>
+          <div>
+            <p className="font-bold text-sm">Sucesso!</p>
+            <p className="text-xs text-emerald-100 mt-0.5">{toastMessage}</p>
+          </div>
+          <button onClick={() => setShowSuccessToast(false)} className="ml-4 text-emerald-200 hover:text-white"><X size={18} /></button>
+        </div>
+      )}
     </div>
   );
 }
