@@ -7,6 +7,7 @@ import Registo from './components/Registo';
 import EsqueceuPassword from './components/EsqueceuPassword';
 import Mensagens from './components/Mensagens';
 import DashboardSenhorio from './components/DashboardSenhorio';
+import DashboardAdmin from './components/DashboardAdmin';
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="/perfil" element={<Perfil />} />
         <Route path="/mensagens" element={<Mensagens />} />
         <Route path="/dashboard-senhorio" element={<DashboardSenhorio />} />
+        <Route path="/admin" element={<DashboardAdmin />} />
       </Routes>
     </BrowserRouter>
   );
