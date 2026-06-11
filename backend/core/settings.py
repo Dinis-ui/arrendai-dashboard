@@ -157,3 +157,5 @@ CORS_ALLOWED_ORIGINS = [
 # <-- Configurações para Upload de Ficheiros (Documentos e Imagens) -->
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
