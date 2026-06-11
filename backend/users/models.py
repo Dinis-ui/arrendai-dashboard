@@ -5,10 +5,11 @@ from django.conf import settings # Precisamos disto para ligar a propriedade ao 
 # --- TABELA 1: OS UTILIZADORES ---
 class User(AbstractUser):
     ROLE_CHOICES = (
-        ('inquilino', 'Inquilino'),
-        ('senhorio', 'Senhorio'),
+        ('tenant', 'Inquilino'),    # 'tenant' é o valor, 'Inquilino' é o rótulo
+        ('landlord', 'Senhorio'),   # 'landlord' é o valor, 'Senhorio' é o rótulo
         ('admin', 'Administrador'),
     )
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='tenant')
 
     nome_completo = models.CharField(max_length=255, blank=True, null=True)
     nif = models.CharField(max_length=9, blank=True, null=True, unique=True)
