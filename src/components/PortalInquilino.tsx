@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Search, MapPin, Home, FileText, Wallet, Bell, ChevronDown, 
   SlidersHorizontal, Heart, ArrowUpRight, User, MessageSquare, 
-  Check, X, UploadCloud, CheckCircle
+  Check, X, UploadCloud, CheckCircle, Trash2
 } from 'lucide-react';
 
 // DADOS DE TESTE (MOCK DATA)
@@ -144,6 +144,10 @@ export default function PortalInquilino() {
   const [candidaturaEnviada, setCandidaturaEnviada] = useState(false);
   const [imovelCandidatura, setImovelCandidatura] = useState<typeof listings[0] | null>(null);
   const [mensagemCandidatura, setMensagemCandidatura] = useState('');
+  
+  // ESTADOS E REF PARA UPLOAD DE FICHEIROS
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [ficheiros, setFicheiros] = useState<File[]>([]);
 
   // LÓGICA PARA IR BUSCAR O NOME DO UTILIZADOR AO DJANGO
   useEffect(() => {
@@ -175,8 +179,44 @@ export default function PortalInquilino() {
   const handleOpenCandidatura = (imovel: typeof listings[0]) => {
     setImovelCandidatura(imovel);
     setMensagemCandidatura('');
+    setFicheiros([]); // Limpa ficheiros de candidaturas anteriores
     setIsCandidaturaOpen(true);
     setCandidaturaEnviada(false);
+  };
+
+  // Função para lidar com a seleção de ficheiros e validação
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+      const validFiles: File[] = [];
+
+      filesArray.forEach(file => {
+        // Valida o tipo (PDF, JPG, PNG)
+        const validTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+        if (!validTypes.includes(file.type)) {
+          alert(`O ficheiro "${file.name}" tem um formato inválido. Apenas PDF, JPG e PNG são permitidos.`);
+          return;
+        }
+
+        // Valida o tamanho (Máx 10MB)
+        const maxSize = 10 * 1024 * 1024; // 10MB em bytes
+        if (file.size > maxSize) {
+          alert(`O ficheiro "${file.name}" é demasiado grande. O tamanho máximo é 10MB.`);
+          return;
+        }
+
+        validFiles.push(file);
+      });
+
+      setFicheiros(prev => [...prev, ...validFiles]);
+    }
+    
+    // Reseta o input para permitir selecionar o mesmo ficheiro se for apagado e adicionado de novo
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removerFicheiro = (indexToRemove: number) => {
+    setFicheiros(prev => prev.filter((_, index) => index !== indexToRemove));
   };
 
   // Função para submeter a candidatura a partir do Modal PARA O DJANGO
@@ -208,6 +248,7 @@ export default function PortalInquilino() {
           setCandidaturaEnviada(false);
           setImovelCandidatura(null);
           setMensagemCandidatura('');
+          setFicheiros([]);
           setActiveTab('Minhas Candidaturas');
         }, 3000);
       } else {
@@ -476,23 +517,48 @@ export default function PortalInquilino() {
 
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">2. Documentos Comprovativos</label>
-                    <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:bg-slate-50 hover:border-sky-300 transition-colors cursor-pointer">
+                    
+                    {/* INPUT INVISÍVEL PARA FICHEIROS */}
+                    <input 
+                      type="file" 
+                      multiple 
+                      className="hidden" 
+                      ref={fileInputRef} 
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={handleFileChange} 
+                    />
+
+                    {/* ÁREA CLICÁVEL */}
+                    <div 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:bg-slate-50 hover:border-sky-300 transition-colors cursor-pointer"
+                    >
                       <UploadCloud size={28} className="mx-auto text-sky-500 mb-2" />
                       <p className="text-sm font-medium text-slate-700">Clica para enviar ficheiros</p>
                       <p className="text-xs text-slate-400 mt-1">PDF, JPG ou PNG (Máx 10MB)</p>
                     </div>
                     
+                    {/* LISTA DOS FICHEIROS SELECIONADOS */}
                     <div className="mt-3 space-y-2">
-                      <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                        <FileText size={16} className="text-slate-400" />
-                        <span className="text-sm text-slate-600 flex-1">IRS_2023.pdf</span>
-                        <span className="text-xs font-bold text-green-500">Anexado</span>
-                      </div>
-                      <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                        <FileText size={16} className="text-slate-400" />
-                        <span className="text-sm text-slate-600 flex-1">Recibos_Vencimento.pdf</span>
-                        <span className="text-xs font-bold text-green-500">Anexado</span>
-                      </div>
+                      {ficheiros.map((file, idx) => (
+                        <div key={idx} className="flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                          <FileText size={16} className="text-slate-400 shrink-0" />
+                          <span className="text-sm text-slate-600 flex-1 truncate" title={file.name}>{file.name}</span>
+                          <span className="text-xs font-bold text-slate-400 shrink-0">{(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                          <button 
+                            type="button" 
+                            onClick={() => removerFicheiro(idx)}
+                            className="text-red-400 hover:text-red-600 p-1 shrink-0 transition-colors"
+                            title="Remover ficheiro"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                      
+                      {ficheiros.length === 0 && (
+                        <p className="text-xs text-slate-400 text-center py-2 italic">Nenhum ficheiro selecionado.</p>
+                      )}
                     </div>
                   </div>
 
