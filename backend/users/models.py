@@ -33,3 +33,29 @@ class Propriedade(models.Model):
 
     def __str__(self):
         return self.morada
+    
+    TIPO_CHOICES = (
+        ('apartamento', 'Apartamento'),
+        ('moradia', 'Moradia'),
+        ('quarto', 'Quarto'),
+    )
+    tipo_casa = models.CharField(max_length=20, choices=TIPO_CHOICES, default='apartamento')
+    
+    # Para as fotos, usamos o ImageField (guarda o ficheiro na pasta 'media')
+    foto_principal = models.ImageField(upload_to='propriedades/', blank=True, null=True)
+
+    # 2. O Sistema de Moderação (O segredo para o Admin)
+    STATUS_APROVACAO_CHOICES = (
+        ('pendente', 'Pendente de Aprovação'),
+        ('aprovado', 'Aprovado'),
+        ('rejeitado', 'Rejeitado'),
+    )
+    status_aprovacao = models.CharField(
+        max_length=20, 
+        choices=STATUS_APROVACAO_CHOICES, 
+        default='pendente' # <--- Mal o senhorio cria, fica logo "pendente"!
+    )
+
+    anuncio_publicado = models.BooleanField(default=False)
+    titulo_anuncio = models.CharField(max_length=255, blank=True, null=True)
+    preco_anuncio = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)

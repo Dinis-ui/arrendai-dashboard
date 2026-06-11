@@ -31,6 +31,9 @@ class UserSerializer(serializers.ModelSerializer):
 class PropriedadeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Propriedade
-        fields = ['id', 'senhorio', 'morada', 'area', 'valor_estimado', 'estado', 'data_criacao']
-        # Definimos o senhorio como "só de leitura" porque vamos preenchê-lo automaticamente no views.py
-        read_only_fields = ['senhorio', 'data_criacao']
+        # 1. Adicionamos os 3 campos novos aqui à lista fields:
+        fields = ['id', 'senhorio', 'morada', 'area', 'valor_estimado', 'estado', 'data_criacao', 'tipo_casa', 'foto_principal', 'status_aprovacao', 'anuncio_publicado', 'titulo_anuncio', 'preco_anuncio']
+        
+        # 2. Bloqueamos o 'status_aprovacao' para ser só de leitura. 
+        # Assim evitamos que um senhorio "hacker" consiga auto-aprovar a sua casa enviando 'aprovado' no React!
+        read_only_fields = ['senhorio', 'data_criacao', 'status_aprovacao']

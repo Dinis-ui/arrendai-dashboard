@@ -81,7 +81,6 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
       if (!token) return;
 
       try {
-        // CORRIGIDO: Rota exata mapeada no Django
         const response = await fetch('http://127.0.0.1:8000/api/users/propriedades/', {
           method: 'GET',
           headers: {
@@ -94,19 +93,30 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
           const dadosReais = await response.json();
           
           if (dadosReais.length > 0) {
-            // AJUSTE: Traduz o 'valor_estimado' do Django para o teu 'preco' visual do React
             const dadosFormatados = dadosReais.map((prop: any) => {
               let cor = 'bg-slate-50 text-slate-700';
-              if (prop.estado === 'Alugado') cor = 'bg-green-50 text-green-700';
-              if (prop.estado === 'Vazio') cor = 'bg-amber-50 text-amber-700';
-              if (prop.estado === 'Em Obras') cor = 'bg-red-50 text-red-700';
+              let estadoExibicao = prop.estado;
+
+              // SE O ESTADO DE APROVAÇÃO FOR PENDENTE, REALÇA ISSO NO ECRÃ
+              if (prop.status_aprovacao === 'pendente') {
+                cor = 'bg-amber-50 text-amber-700';
+                estadoExibicao = 'Em Revisão (Admin)';
+              } else if (prop.estado === 'Alugado') {
+                cor = 'bg-green-50 text-green-700';
+              } else if (prop.estado === 'Vazio') {
+                cor = 'bg-sky-50 text-sky-700';
+              } else if (prop.estado === 'Em Obras') {
+                cor = 'bg-red-50 text-red-700';
+              }
 
               return {
                 ...prop,
                 preco: Number(prop.valor_estimado || 0), // Converte para o teu padrão local
-                cor: prop.cor || cor,
-                imagem: prop.imagem || 'https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=1200',
-                galeria: prop.galeria || ['https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=1200']
+                estado: estadoExibicao, // Mostra "Em Revisão" se o admin não aceitou
+                cor: cor,
+                // Vai buscar a foto verdadeira ao Django, ou usa a provisória se não houver
+                imagem: prop.foto_principal || 'https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=1200',
+                galeria: prop.foto_principal ? [prop.foto_principal] : ['https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=1200']
               };
             });
             setPropriedades(dadosFormatados);
@@ -120,78 +130,70 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
     buscarPropriedadesDaBD();
   }, []);
 
+
+
   // ==============================================================
   // 2. CRIAR NOVA PROPRIEDADE NA BASE DE DADOS (POST)
   // ==============================================================
   const handleAddProperty = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
+    
+    // O FormData vai capturar TODOS os inputs do formulário automaticamente (incluindo o ficheiro da imagem)
+    const form = e.currentTarget;
+    const formData = new FormData(form);
     const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
     
-    const novoEstado = formData.get('estado') as string;
+    // O Django espera o nome 'valor_estimado', mas o nosso input chama-se 'preco', por isso copiamos o valor
+    formData.append('valor_estimado', formData.get('preco') as string);
+    formData.delete('preco'); // Limpamos o nome antigo
 
+    const novoEstado = formData.get('estado') as string;
     let novaCor = 'bg-slate-50 text-slate-700';
     if (novoEstado === 'Alugado') novaCor = 'bg-green-50 text-green-700';
     if (novoEstado === 'Vazio') novaCor = 'bg-amber-50 text-amber-700';
     if (novoEstado === 'Em Obras') novaCor = 'bg-red-50 text-red-700';
 
-    // CORRIGIDO: Mapeamos o valor para 'valor_estimado' que é o que o teu DjangoSerializer espera
-    const dadosParaEnviar = {
-      morada: formData.get('morada') as string,
-      area: Number(formData.get('area')),
-      valor_estimado: Number(formData.get('preco')), // Mudado de 'preco' para 'valor_estimado'
-      estado: novoEstado,
-    };
-
     if (token) {
       try {
-        // CORRIGIDO: Rota ajustada para bater no teu endpoint correto
         const response = await fetch('http://127.0.0.1:8000/api/users/propriedades/', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
+            // ATENÇÃO: Retirámos o 'Content-Type': 'application/json'!!! 
+            // Quando enviamos ficheiros, o browser tem de tratar do Content-Type sozinho.
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify(dadosParaEnviar)
+          body: formData // Enviamos o FormData cru, não usamos JSON.stringify()
         });
 
         if (response.ok) {
           const propriedadeCriadaNaBD = await response.json();
           
-          // Reconstrói o objeto visual juntando o retorno do Neon com os teus campos de imagem/estilo locais
           const novaPropriedade = { 
             ...propriedadeCriadaNaBD,
             preco: Number(propriedadeCriadaNaBD.valor_estimado),
             cor: novaCor,
             inquilino: novoEstado === 'Alugado' ? 'Novo Inquilino' : null,
-            contratoInicio: novoEstado === 'Alugado' ? 'Hoje' : '-',
-            contratoFim: novoEstado === 'Alugado' ? 'Em 1 ano' : '-',
-            imagem: 'https://images.pexels.com/photos/439391/pexels-photo-439391.jpeg?auto=compress&cs=tinysrgb&w=1200',
-            galeria: ['https://images.pexels.com/photos/439391/pexels-photo-439391.jpeg?auto=compress&cs=tinysrgb&w=1200']
+            contratoInicio: '-',
+            contratoFim: '-',
+            // Se o Django guardou a foto, usamos a URL dele, senão usamos a foto genérica
+            imagem: propriedadeCriadaNaBD.foto_principal || 'https://images.pexels.com/photos/439391/pexels-photo-439391.jpeg?auto=compress&cs=tinysrgb&w=1200',
+            galeria: []
           };
 
           setPropriedades([novaPropriedade, ...propriedades]);
           setIsAddModalOpen(false);
-          setToastMessage('Nova propriedade guardada na Base de Dados Neon!');
+          setToastMessage('Propriedade enviada para aprovação!');
           setShowSuccessToast(true);
           setTimeout(() => setShowSuccessToast(false), 3000);
         } else {
           console.error("Erro do servidor:", await response.text());
-          alert("Não foi possível gravar na base de dados. Confirma se o teu backend está ativo.");
+          alert("Não foi possível gravar na base de dados.");
         }
       } catch (error) {
         console.error("Erro de comunicação com a API:", error);
       }
-    } else {
-      // Fallback local caso não encontre sessão (útil para testes de UI)
-      setPropriedades([{ id: Date.now(), ...dadosParaEnviar, preco: dadosParaEnviar.valor_estimado, cor: novaCor, imagem: 'https://images.pexels.com/photos/439391/pexels-photo-439391.jpeg?auto=compress&cs=tinysrgb&w=1200' }, ...propriedades]);
-      setIsAddModalOpen(false);
-      setToastMessage('Guardado apenas localmente (Sem sessão ativa).');
-      setShowSuccessToast(true);
-      setTimeout(() => setShowSuccessToast(false), 3000);
     }
   };
-
   // LÓGICA DO BOTÃO "GUARDAR ALTERAÇÕES"
   const handleSaveEdit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -230,40 +232,54 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
   };
   
   // Criar Anúncio e enviar para o LocalStorage
-  const handleCriarAnuncio = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleCriarAnuncio = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setSucessoAnuncio(true);
     
     const formData = new FormData(e.currentTarget);
-    const propInfo = propriedades.find(p => p.id === propriedadeSelecionadaId);
-
-    if (propInfo) {
-      const novoAnuncio = {
-        id: Date.now(),
-        titulo: formData.get('titulo'),
-        title: formData.get('titulo'),
-        preco: `${Number(formData.get('preco'))}€`,
-        price: `${Number(formData.get('preco'))}€`,
-        location: propInfo.morada,
-        area: propInfo.area,
-        tipo: 'Apartamento Inteiro', 
-        estado: 'Em Revisão',
-        status: 'Em Revisão', 
-        cor: 'text-amber-600 bg-amber-50',
-        views: 0,
-        candidates: 0,
-        photo: propInfo.imagem
-      };
-
-      const anunciosGuardados = JSON.parse(localStorage.getItem('meusAnuncios') || '[]');
-      localStorage.setItem('meusAnuncios', JSON.stringify([novoAnuncio, ...anunciosGuardados]));
-    }
+    const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
     
-    setTimeout(() => {
-      setSucessoAnuncio(false);
-      setAbrirModalAnuncio(false);
-      if (onMudarParaAnuncios) onMudarParaAnuncios();
-    }, 2000);
+    const titulo = formData.get('titulo') as string;
+    const preco = Number(formData.get('preco'));
+
+    if (propriedadeSelecionadaId && token) {
+      try {
+        // Fazemos um PATCH porque só queremos atualizar estes campos, mantendo o resto da propriedade intacta
+        const response = await fetch(`http://127.0.0.1:8000/api/users/propriedades/${propriedadeSelecionadaId}/`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            anuncio_publicado: true,
+            titulo_anuncio: titulo,
+            preco_anuncio: preco
+          })
+        });
+
+        if (response.ok) {
+          setSucessoAnuncio(true); // Mostra aquela animação verde bonita que já tens
+          
+          // Atualiza a lista visualmente no ecrã para o senhorio
+          setPropriedades(propriedades.map(p => 
+            p.id === propriedadeSelecionadaId 
+              ? { ...p, anuncio_publicado: true, titulo_anuncio: titulo, preco_anuncio: preco } 
+              : p
+          ));
+
+          setTimeout(() => {
+            setSucessoAnuncio(false);
+            setAbrirModalAnuncio(false);
+            // Se tens uma aba 'Anúncios', muda para lá
+            if (onMudarParaAnuncios) onMudarParaAnuncios();
+          }, 2000);
+        } else {
+          alert("Erro ao publicar o anúncio.");
+        }
+      } catch (error) {
+        console.error("Erro na ligação:", error);
+      }
+    }
   };
 
   const nextImage = (galeria: string[]) => {
@@ -619,18 +635,47 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
       {/* MODAL 5: ADICIONAR NOVA PROPRIEDADE */}
       {isAddModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <form onSubmit={handleAddProperty} className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl">
+          {/* Adicionámos encType="multipart/form-data" para permitir envio de ficheiros */}
+          <form onSubmit={handleAddProperty} encType="multipart/form-data" className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
               <h3 className="font-bold text-lg text-slate-800">Nova Propriedade</h3>
               <button type="button" onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-full transition-colors">
                 <X size={18} />
               </button>
             </div>
+            
             <div className="p-6 space-y-5">
+              {/* NOVO CAMPO: Fotografia */}
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Fotografia Principal</label>
+                <input type="file" name="foto_principal" accept="image/*" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 focus:border-sky-500 outline-none file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100" />
+              </div>
+
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Morada</label>
                 <input type="text" name="morada" required placeholder="Rua, Número, Localidade" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 focus:border-sky-500 outline-none" />
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* NOVO CAMPO: Tipo de Casa */}
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Tipo</label>
+                  <select name="tipo_casa" defaultValue="apartamento" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 focus:border-sky-500 outline-none cursor-pointer">
+                    <option value="apartamento">Apartamento</option>
+                    <option value="moradia">Moradia</option>
+                    <option value="quarto">Quarto</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Estado Ocupação</label>
+                  <select name="estado" defaultValue="Vazio" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 focus:border-sky-500 outline-none cursor-pointer">
+                    <option value="Vazio">Vazio</option>
+                    <option value="Em Obras">Em Obras</option>
+                    <option value="Alugado">Alugado</option>
+                  </select>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Área (m²)</label>
@@ -641,15 +686,8 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
                   <input type="number" name="preco" required placeholder="0" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 focus:border-sky-500 outline-none" />
                 </div>
               </div>
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Estado</label>
-                <select name="estado" defaultValue="Vazio" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 focus:border-sky-500 outline-none cursor-pointer">
-                  <option value="Vazio">Vazio (Pronto a anunciar)</option>
-                  <option value="Em Obras">Em Obras</option>
-                  <option value="Alugado">Alugado (Já com inquilino)</option>
-                </select>
-              </div>
             </div>
+
             <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50/50">
               <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
               <button type="submit" className="px-6 py-2.5 text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition-colors shadow-md shadow-sky-600/20">Criar Propriedade</button>

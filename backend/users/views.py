@@ -53,8 +53,21 @@ class PropriedadeViewSet(viewsets.ModelViewSet):
 
     # Em vez do queryset fixo com .all(), usamos esta função:
     def get_queryset(self):
-        # Filtra a base de dados para devolver APENAS as casas do utilizador logado
-        return Propriedade.objects.filter(senhorio=self.request.user).order_by('-data_criacao')
+        user = self.request.user
+        
+        # O Admin vê tudo
+        if user.is_staff or user.role == 'admin':
+            return Propriedade.objects.all().order_by('-data_criacao')
+            
+        # O Senhorio vê as dele (ADICIONEI 'landlord' AQUI PARA GARANTIR)
+        if user.role == 'senhorio' or user.role == 'landlord':
+            return Propriedade.objects.filter(senhorio=user).order_by('-data_criacao')
+        
+        # O Inquilino vê apenas as Aprovadas E Publicadas
+        return Propriedade.objects.filter(
+            status_aprovacao='aprovado', 
+            anuncio_publicado=True
+        ).order_by('-data_criacao')
 
     def perform_create(self, serializer):
         serializer.save(senhorio=self.request.user)
