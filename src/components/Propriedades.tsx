@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // <-- Adicionado o useEffect aqui!
 import { 
   Building2, MapPin, ArrowLeft, Home, Banknote, Users, PenSquare,
   ImageIcon, X, CheckCircle2, Megaphone, Euro, FileText,
-  Mail, Phone, Briefcase, Star, Calendar, ChevronLeft, ChevronRight, Plus // <-- Adicionado o Plus aqui!
+  Mail, Phone, Briefcase, Star, Calendar, ChevronLeft, ChevronRight, Plus
 } from 'lucide-react';
 
 const dadosIniciaisPropriedades = [
@@ -58,54 +58,121 @@ interface PropriedadesProps {
 }
 
 export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps) {
-  const [propriedades, setPropriedades] = useState(dadosIniciaisPropriedades);
+  // Estado para armazenar as propriedades
+  const [propriedades, setPropriedades] = useState<any[]>(dadosIniciaisPropriedades);
   const [propriedadeSelecionadaId, setPropriedadeSelecionadaId] = useState<number | null>(null);
   
   // Estados dos Modais
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false); // NOVO ESTADO: Adicionar Propriedade
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false); 
   const [abrirModalAnuncio, setAbrirModalAnuncio] = useState(false);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [isTenantProfileOpen, setIsTenantProfileOpen] = useState(false);
   
   // Outros Estados
   const [showSuccessToast, setShowSuccessToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState(''); // Dinamizar a mensagem do toast
+  const [toastMessage, setToastMessage] = useState(''); 
   const [sucessoAnuncio, setSucessoAnuncio] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  // LÓGICA DO BOTÃO "CRIAR NOVA PROPRIEDADE"
-  const handleAddProperty = (e: React.FormEvent<HTMLFormElement>) => {
+  // ==============================================================
+  // 1. CARREGAR PROPRIEDADES DA BASE DE DADOS (GET)
+  // ==============================================================
+  useEffect(() => {
+    const buscarPropriedadesDaBD = async () => {
+      const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+      if (!token) return;
+
+      try {
+        const response = await fetch('http://127.0.0.1:8000/api/propriedades/', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const dadosReais = await response.json();
+          // Se houver dados reais na BD, atualiza o ecrã com eles
+          if (dadosReais.length > 0) {
+            setPropriedades(dadosReais);
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao ir buscar as propriedades à BD:", error);
+      }
+    };
+
+    buscarPropriedadesDaBD();
+  }, []);
+
+  // ==============================================================
+  // 2. CRIAR NOVA PROPRIEDADE NA BASE DE DADOS (POST)
+  // ==============================================================
+  const handleAddProperty = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
     
     const novoEstado = formData.get('estado') as string;
+
+    // Gerar as cores e campos visuais baseados no estado
     let novaCor = 'bg-slate-50 text-slate-700';
     if (novoEstado === 'Alugado') novaCor = 'bg-green-50 text-green-700';
     if (novoEstado === 'Vazio') novaCor = 'bg-amber-50 text-amber-700';
     if (novoEstado === 'Em Obras') novaCor = 'bg-red-50 text-red-700';
 
-    const novaPropriedade = {
-      id: Date.now(),
+    const dadosParaEnviar = {
       morada: formData.get('morada') as string,
       area: Number(formData.get('area')),
       preco: Number(formData.get('preco')),
       estado: novoEstado,
+      // Se o backend aceitar estes campos podes enviar, se não o React adiciona-os depois
       cor: novaCor,
       inquilino: novoEstado === 'Alugado' ? 'Novo Inquilino' : null,
       contratoInicio: novoEstado === 'Alugado' ? 'Hoje' : '-',
       contratoFim: novoEstado === 'Alugado' ? 'Em 1 ano' : '-',
-      // Dá uma imagem bonita e genérica por defeito
-      imagem: 'https://images.pexels.com/photos/439391/pexels-photo-439391.jpeg?auto=compress&cs=tinysrgb&w=1200', 
-      galeria: ['https://images.pexels.com/photos/439391/pexels-photo-439391.jpeg?auto=compress&cs=tinysrgb&w=1200'],
-      perfilInquilino: null
+      imagem: 'https://images.pexels.com/photos/439391/pexels-photo-439391.jpeg?auto=compress&cs=tinysrgb&w=1200'
     };
 
-    setPropriedades([novaPropriedade, ...propriedades]);
-    setIsAddModalOpen(false);
-    setToastMessage('Nova propriedade adicionada com sucesso!');
-    setShowSuccessToast(true);
-    setTimeout(() => setShowSuccessToast(false), 3000);
+    if (token) {
+      try {
+        const response = await fetch('http://127.0.0.1:8000/api/propriedades/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(dadosParaEnviar)
+        });
+
+        if (response.ok) {
+          const propriedadeCriadaNaBD = await response.json();
+          
+          // Junta os dados que a BD devolveu com os dados visuais do React
+          const novaPropriedade = { ...dadosParaEnviar, ...propriedadeCriadaNaBD };
+
+          setPropriedades([novaPropriedade, ...propriedades]);
+          setIsAddModalOpen(false);
+          setToastMessage('Nova propriedade guardada na Base de Dados!');
+          setShowSuccessToast(true);
+          setTimeout(() => setShowSuccessToast(false), 3000);
+        } else {
+          console.error("Erro do servidor:", await response.text());
+          alert("Não foi possível gravar na base de dados. Verifica a consola.");
+        }
+      } catch (error) {
+        console.error("Erro de comunicação com a API:", error);
+      }
+    } else {
+      // Fallback local se não houver token (para conseguires testar o visual)
+      setPropriedades([{ id: Date.now(), ...dadosParaEnviar }, ...propriedades]);
+      setIsAddModalOpen(false);
+      setToastMessage('Guardado localmente (Sem autenticação).');
+      setShowSuccessToast(true);
+      setTimeout(() => setShowSuccessToast(false), 3000);
+    }
   };
 
   // LÓGICA DO BOTÃO "GUARDAR ALTERAÇÕES"
@@ -450,7 +517,7 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
           </div>
         )}
 
-        {/* MODAL 4: CRIAR ANÚNCIO (MANTIDO) */}
+        {/* MODAL 4: CRIAR ANÚNCIO */}
         {abrirModalAnuncio && (
            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
              <div className="bg-white rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col">
@@ -587,7 +654,7 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
         </div>
       )}
 
-      {/* AVISO DE SUCESSO GLOBAL (Serve para Adicionar e Editar) */}
+      {/* AVISO DE SUCESSO GLOBAL */}
       {showSuccessToast && (
         <div className="fixed bottom-10 right-10 bg-emerald-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 z-50 animate-in fade-in slide-in-from-bottom-6">
           <div className="bg-white/20 p-2 rounded-full"><CheckCircle2 size={24} className="text-white" /></div>

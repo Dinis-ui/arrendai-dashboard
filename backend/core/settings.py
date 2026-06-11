@@ -10,9 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
-import os # <-- ADICIONADO AQUI
+import os 
 from pathlib import Path
-from datetime import timedelta # <-- ADICIONADO AQUI PARA GERIR O TEMPO DO TOKEN
+from datetime import timedelta 
+import dj_database_url # <-- ADICIONADO AQUI PARA LIGAR AO NEON
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -85,11 +86,9 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+# <-- MODIFICADO AQUI: AGORA APONTA PARA A NUVEM -->
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.parse("postgresql://neondb_owner:npg_YidNEklXn06H@ep-noisy-hat-at0fy770.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require")
 }
 
 
@@ -138,7 +137,7 @@ REST_FRAMEWORK = {
     ),
 }
 
-# <-- NOVO: CONFIGURAÇÃO DE TEMPO DO TOKEN JWT -->
+# CONFIGURAÇÃO DE TEMPO DO TOKEN JWT
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=30), # Token principal dura 30 dias
     'REFRESH_TOKEN_LIFETIME': timedelta(days=60), # Token de renovação dura 60 dias
@@ -154,7 +153,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
 ]
 
-# <-- Configurações para Upload de Ficheiros (Documentos e Imagens) -->
+# Configurações para Upload de Ficheiros (Documentos e Imagens)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
