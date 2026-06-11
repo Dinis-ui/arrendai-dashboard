@@ -6,18 +6,28 @@ export default function EsqueceuPassword() {
   const [email, setEmail] = useState('');
   const [enviado, setEnviado] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState('');
 
   const lidarComEnvio = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setErro('');
 
-    // Simulacao de envio para o backend 
     try {
-      // Aqui faras o fetch('/api/password-reset/')
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setEnviado(true);
-    } catch {
-      // Erro generico
+      // O teu colega deve criar esta rota no Django para processar o email
+      const response = await fetch('http://127.0.0.1:8000/api/password-reset/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      if (response.ok) {
+        setEnviado(true);
+      } else {
+        setErro('Não conseguimos encontrar uma conta com esse email.');
+      }
+    } catch (err) {
+      setErro('Erro de ligação ao servidor. Tenta novamente mais tarde.');
     } finally {
       setLoading(false);
     }
@@ -35,7 +45,7 @@ export default function EsqueceuPassword() {
             Recuperar Password
           </h1>
           <p className="text-sm text-slate-500 max-w-[280px]">
-            Insere o teu email para receberes as instrucoes de recuperacao.
+            Insere o teu email para receberes as instruções de recuperação.
           </p>
         </div>
 
@@ -44,7 +54,7 @@ export default function EsqueceuPassword() {
             <form onSubmit={lidarComEnvio} className="space-y-6">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-                  <Mail size={16} className="text-slate-400" /> Endereco de Email
+                  <Mail size={16} className="text-slate-400" /> Endereço de Email
                 </label>
                 <input 
                   type="email" 
@@ -55,6 +65,10 @@ export default function EsqueceuPassword() {
                   placeholder="exemplo@email.com"
                 />
               </div>
+
+              {erro && (
+                <p className="text-sm text-red-600 bg-red-50 p-2 rounded-lg text-center">{erro}</p>
+              )}
 
               <button 
                 type="submit" 
@@ -73,13 +87,13 @@ export default function EsqueceuPassword() {
               </div>
               <h3 className="text-lg font-bold text-slate-900 mb-2">Verifica o teu email</h3>
               <p className="text-sm text-slate-500 mb-8 leading-relaxed">
-                Se existir uma conta associada ao email {email}, receberas um link para criar uma nova password em poucos minutos.
+                Se existir uma conta associada ao email <b>{email}</b>, receberás um link para criar uma nova password em poucos minutos.
               </p>
               <button 
                 onClick={() => setEnviado(false)}
                 className="text-sm font-semibold text-sky-500 hover:text-sky-600"
               >
-                Nao recebi nada, tentar novamente
+                Não recebi nada, tentar novamente
               </button>
             </div>
           )}

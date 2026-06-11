@@ -4,8 +4,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from datetime import timedelta
-from .models import Application, Tenancy, Document
-from .serializers import ApplicationSerializer, TenancySerializer, DocumentSerializer
+from .models import Application, Tenancy, Document, Chat, Message
+from .serializers import ApplicationSerializer, TenancySerializer, DocumentSerializer, ChatSerializer, MessageSerializer
 
 class ApplicationViewSet(viewsets.ModelViewSet):
     serializer_class = ApplicationSerializer
@@ -13,10 +13,8 @@ class ApplicationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        # Se for Senhorio, vê candidaturas das SUAS casas (usando o campo landlord)
         if user.role == 'landlord':
             return Application.objects.filter(property__landlord=user) 
-        # Se for Inquilino, vê as suas próprias
         return Application.objects.filter(tenant=user)
 
     def perform_create(self, serializer):
@@ -25,62 +23,66 @@ class ApplicationViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
         application = self.get_object()
-        
-        # Só o senhorio dono da casa pode aprovar
-        if request.user.role != 'landlord' or application.property.landlord != request.user:
-            return Response({'error': 'Sem permissão.'}, status=status.HTTP_403_FORBIDDEN)
+        if application.status == 'approved':
+            return Response({'error': 'Já aprovada.'}, status=status.HTTP_400_BAD_REQUEST)
 
         application.status = 'approved'
         application.save()
 
-        # Cria Contrato automático
+        # Cria Contrato
         Tenancy.objects.create(
             property=application.property,
             tenant=application.tenant,
             start_date=timezone.now().date(),
             end_date=timezone.now().date() + timedelta(days=365),
-            monthly_rent=application.property.monthly_rent, # Corrigido para monthly_rent
+            monthly_rent=application.property.monthly_rent,
             is_active=True
         )
 
-        # Rejeita as outras para a mesma casa
-        Application.objects.filter(property=application.property, status='pending').exclude(id=application.id).update(status='rejected')
+        # Cria Chat
+        chat = Chat.objects.create(property=application.property)
+        chat.participants.add(application.tenant, application.property.landlord)
+        Message.objects.create(
+            chat=chat,
+            sender=application.property.landlord,
+            text=f"Olá! A sua candidatura ao imóvel {application.property.title} foi aceite."
+        )
 
-        return Response({'message': 'Aprovada e contrato criado!'}, status=status.HTTP_200_OK)
+        Application.objects.filter(property=application.property, status='pending').exclude(id=application.id).update(status='rejected')
+        return Response({'message': 'Aprovada!'}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'])
     def reject(self, request, pk=None):
         application = self.get_object()
-        # Só o dono da casa pode rejeitar
-        if request.user.role != 'landlord' or application.property.landlord != request.user:
-            return Response({'error': 'Sem permissão.'}, status=status.HTTP_403_FORBIDDEN)
-
         application.status = 'rejected'
         application.save()
-        return Response({'message': 'Candidatura rejeitada.'})
-
+        return Response({'message': 'Rejeitada.'})
 
 class TenancyViewSet(viewsets.ModelViewSet):
     serializer_class = TenancySerializer
     permission_classes = [IsAuthenticated]
-
     def get_queryset(self):
         user = self.request.user
-        if user.role == 'landlord':
-            return Tenancy.objects.filter(property__landlord=user)
-        return Tenancy.objects.filter(tenant=user)
-
+        return Tenancy.objects.filter(tenant=user) if user.role != 'landlord' else Tenancy.objects.filter(property__landlord=user)
 
 class DocumentViewSet(viewsets.ModelViewSet):
     serializer_class = DocumentSerializer
     permission_classes = [IsAuthenticated]
-
     def get_queryset(self):
-        user = self.request.user
-        if user.role == 'landlord':
-            # Filtra documentos de inquilinos que se candidataram às casas deste senhorio
-            return Document.objects.filter(tenant__applications__property__landlord=user).distinct()
-        return Document.objects.filter(tenant=user)
-
+        return Document.objects.filter(tenant=self.request.user)
     def perform_create(self, serializer):
         serializer.save(tenant=self.request.user)
+
+class ChatViewSet(viewsets.ModelViewSet):
+    serializer_class = ChatSerializer
+    permission_classes = [IsAuthenticated]
+    def get_queryset(self):
+        return Chat.objects.filter(participants=self.request.user)
+
+class MessageViewSet(viewsets.ModelViewSet):
+    serializer_class = MessageSerializer
+    permission_classes = [IsAuthenticated]
+    def get_queryset(self):
+        return Message.objects.filter(chat__participants=self.request.user)
+    def perform_create(self, serializer):
+        serializer.save(sender=self.request.user)

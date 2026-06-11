@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Search, MapPin, Home, FileText, Wallet, Bell, ChevronDown, 
   SlidersHorizontal, Heart, ArrowUpRight, User, MessageSquare, 
-  Check, X, UploadCloud, CheckCircle // <-- Adicionados novos ícones
+  Check, X, UploadCloud, CheckCircle
 } from 'lucide-react';
 
 // DADOS DE TESTE (MOCK DATA)
@@ -58,7 +58,6 @@ function PropertyCard({ listing, onApply }: { listing: typeof listings[0]; onApp
 
   return (
     <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 group flex flex-col relative">
-      {/* O Link envolve apenas a imagem e os dados, deixando o botão independente */}
       <Link to={`/imovel/${listing.id}`} className="block">
         <div className="relative overflow-hidden h-48">
           <img src={listing.photo} alt={listing.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -97,7 +96,6 @@ function PropertyCard({ listing, onApply }: { listing: typeof listings[0]; onApp
         </div>
       </Link>
       
-      {/* O Footer com o botão fica fora do Link */}
       <div className="px-5 pb-5 mt-auto pt-4 border-t border-gray-100 flex items-center justify-between">
         <div>
           <span className="text-2xl font-bold text-slate-900">{listing.price.toLocaleString('pt-PT')}€</span>
@@ -106,8 +104,8 @@ function PropertyCard({ listing, onApply }: { listing: typeof listings[0]; onApp
         <button
           onClick={(e) => {
             e.preventDefault();
-            e.stopPropagation(); // Impede que o clique "vaze" para o link do cartão
-            onApply(listing); // Passa o objeto do imóvel para o Modal
+            e.stopPropagation();
+            onApply(listing);
           }}
           className="flex items-center gap-1.5 bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm"
         >
@@ -121,9 +119,8 @@ function PropertyCard({ listing, onApply }: { listing: typeof listings[0]; onApp
 export default function PortalInquilino() {
   const navigate = useNavigate();
   
-  // ESTADO DO UTILIZADOR LOGADO
+  // ESTADO DO UTILIZADOR LOGADO E PESQUISA
   const [user, setUser] = useState<any>(null);
-
   const [activeTab, setActiveTab] = useState('Pesquisar');
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<Filters>({
@@ -146,8 +143,9 @@ export default function PortalInquilino() {
   const [isCandidaturaOpen, setIsCandidaturaOpen] = useState(false);
   const [candidaturaEnviada, setCandidaturaEnviada] = useState(false);
   const [imovelCandidatura, setImovelCandidatura] = useState<typeof listings[0] | null>(null);
+  const [mensagemCandidatura, setMensagemCandidatura] = useState('');
 
-  // LÓGICA PARA IR BUSCAR O NOME DO UTILIZADOR
+  // LÓGICA PARA IR BUSCAR O NOME DO UTILIZADOR AO DJANGO
   useEffect(() => {
     const carregarUtilizador = async () => {
       const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
@@ -175,46 +173,51 @@ export default function PortalInquilino() {
 
   // Função para abrir o Modal de Candidatura
   const handleOpenCandidatura = (imovel: typeof listings[0]) => {
-    setImovelCandidatura(imovel);Can
+    setImovelCandidatura(imovel);
+    setMensagemCandidatura('');
     setIsCandidaturaOpen(true);
     setCandidaturaEnviada(false);
   };
 
-  // Função para submeter a candidatura a partir do Modal
-  const submeterCandidatura = (e: React.FormEvent) => {
+  // Função para submeter a candidatura a partir do Modal PARA O DJANGO
+  const submeterCandidatura = async (e: React.FormEvent) => {
     e.preventDefault();
-    setCandidaturaEnviada(true);
-    
-    if (imovelCandidatura) {
-       setAppliedIds((prev) => prev.includes(imovelCandidatura.id) ? prev : [...prev, imovelCandidatura.id]);
-       
-       // CRIA A CONVERSA COM SENDERROLE
-       const novaConversa = {
-         id: Date.now(),
-         senhorio: imovelCandidatura.senhorio,
-         inquilino: user?.username || 'Inquilino Interessado', // Guardamos o nome de quem mandou
-         imovel: imovelCandidatura.title,
-         avatar: imovelCandidatura.senhorio.substring(0, 2).toUpperCase(),
-         unread: false,
-         lastMessage: 'Candidatura submetida com sucesso.',
-         time: 'Agora',
-         history: [
-            // A mensagem automática da candidatura usa senderRole: 'tenant'
-            { senderRole: 'tenant', text: `Olá! Acabei de me candidatar ao seu imóvel: ${imovelCandidatura.title}. Os meus documentos já seguiram em anexo.`, time: 'Agora' }
-         ]
-       };
-       
-       const conversasGuardadas = JSON.parse(localStorage.getItem('minhasConversas') || '[]');
-       localStorage.setItem('minhasConversas', JSON.stringify([novaConversa, ...conversasGuardadas]));
-    }
+    if (!imovelCandidatura) return;
 
-    setTimeout(() => {
-      setIsCandidaturaOpen(false);
-      setCandidaturaEnviada(false);
-      setImovelCandidatura(null);
-      setActiveTab('Minhas Candidaturas');
-    }, 3000);
+    const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+    
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/tenancies/applications/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          property: imovelCandidatura.id,
+          message: mensagemCandidatura
+        })
+      });
+
+      if (response.ok) {
+        setCandidaturaEnviada(true);
+        setAppliedIds((prev) => prev.includes(imovelCandidatura.id) ? prev : [...prev, imovelCandidatura.id]);
+        
+        setTimeout(() => {
+          setIsCandidaturaOpen(false);
+          setCandidaturaEnviada(false);
+          setImovelCandidatura(null);
+          setMensagemCandidatura('');
+          setActiveTab('Minhas Candidaturas');
+        }, 3000);
+      } else {
+        alert("Erro ao enviar candidatura. Verifica se o imóvel existe na tua Base de Dados.");
+      }
+    } catch (error) {
+      console.error("Erro na comunicação com o backend:", error);
+    }
   };
+
   const setFilter = (key: keyof Filters) => (value: string) =>
     setFilters((prev) => ({ ...prev, [key]: value }));
 
@@ -227,11 +230,12 @@ export default function PortalInquilino() {
     return matchSearch && matchDistrito && matchTipo && matchPreco && matchArea;
   });
 
+  const nomeExibicao = user?.username || user?.first_name || user?.email || 'Utilizador';
+
   return (
     <div className="flex h-screen bg-gray-50 font-sans text-slate-900 relative">
 
       <aside className="w-64 bg-slate-900 text-white flex flex-col z-10">
-        {/* LOGO */}
         <div className="p-6 flex items-center gap-3">
           <div className="w-8 h-8 bg-sky-500 rounded-lg flex items-center justify-center">
             <span className="font-bold text-xl">A</span>
@@ -239,7 +243,6 @@ export default function PortalInquilino() {
           <span className="text-xl font-bold tracking-tight">ArrendAI</span>
         </div>
 
-        {/* MENU */}
         <nav className="flex-1 px-4 mt-4">
           {menuItems.map((item) => (
             <button
@@ -261,17 +264,16 @@ export default function PortalInquilino() {
           </Link>
         </nav>
 
-        {/* RODAPÉ DO MENU (Perfil Dinâmico) */}
         <div className="p-4 border-t border-slate-800">
           <div 
             onClick={() => navigate('/perfil')}
             className="flex items-center gap-3 px-2 py-2 cursor-pointer hover:bg-slate-800 rounded-lg transition-colors"
           >
-            <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold uppercase">
-              {user?.username ? user.username.charAt(0) : '?'}
+            <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold uppercase shrink-0">
+              {user ? nomeExibicao.charAt(0) : '?'}
             </div>
-            <div>
-              <p className="text-sm font-medium text-white">{user?.username || 'A carregar...'}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">{user ? nomeExibicao : 'A carregar...'}</p>
               <p className="text-xs text-slate-400">Inquilino</p>
             </div>
           </div>
@@ -279,7 +281,6 @@ export default function PortalInquilino() {
       </aside>
 
       <main className="flex-1 flex flex-col overflow-hidden">
-        {/* HEADER (Topo) */}
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 flex-shrink-0 relative z-20">
           <div>
             <h1 className="text-lg font-bold text-slate-800">Portal do Inquilino</h1>
@@ -287,7 +288,6 @@ export default function PortalInquilino() {
           </div>
           
           <div className="flex items-center gap-3">
-            {/* COMPONENTE DE NOTIFICAÇÕES */}
             <div className="relative">
               <button 
                 onClick={() => setShowNotifications(!showNotifications)}
@@ -299,7 +299,6 @@ export default function PortalInquilino() {
                 )}
               </button>
 
-              {/* DROPDOWN DE NOTIFICAÇÕES */}
               {showNotifications && (
                 <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-top-2 z-50">
                   <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
@@ -330,20 +329,16 @@ export default function PortalInquilino() {
               )}
             </div>
 
-            {/* AVATAR DE TOPO DINÂMICO */}
-            <div className="w-9 h-9 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold text-sm uppercase">
-              {user?.username ? user.username.charAt(0) : <User size={18} />}
+            <div className="w-9 h-9 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold text-sm uppercase shrink-0">
+              {user ? nomeExibicao.charAt(0) : <User size={18} />}
             </div>
           </div>
         </header>
 
-        {/* ÁREA DE CONTEÚDO DINÂMICO */}
         <div className="flex-1 overflow-y-auto">
 
-          {/* ABA PESQUISAR */}
           {activeTab === 'Pesquisar' && (
             <div className="p-8">
-              {/* ZONA DE FILTROS */}
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-8">
                 <div className="flex items-center gap-3 mb-5">
                   <SlidersHorizontal size={18} className="text-sky-600" />
@@ -376,7 +371,6 @@ export default function PortalInquilino() {
                 </div>
               </div>
 
-              {/* LISTAGEM DE IMÓVEIS */}
               <div className="flex items-center justify-between mb-5">
                 <p className="text-slate-600 text-sm font-medium"><span className="font-bold text-slate-900">{filtered.length}</span> imóveis encontrados</p>
                 <span className="text-xs text-slate-400">Ordenado por: Relevância</span>
@@ -398,7 +392,6 @@ export default function PortalInquilino() {
             </div>
           )}
 
-          {/* ABA MINHAS CANDIDATURAS */}
           {activeTab === 'Minhas Candidaturas' && (
             <div className="p-8">
               <h2 className="text-xl font-bold text-slate-800 mb-6">Minhas Candidaturas</h2>
@@ -428,7 +421,6 @@ export default function PortalInquilino() {
             </div>
           )}
 
-          {/* ABA AS MINHAS RENDAS */}
           {activeTab === 'As Minhas Rendas' && (
             <div className="p-8">
               <h2 className="text-xl font-bold text-slate-800 mb-6">As Minhas Rendas</h2>
@@ -443,9 +435,6 @@ export default function PortalInquilino() {
         </div>
       </main>
 
-      {/* ========================================== */}
-      {/* MODAL DE CANDIDATURA (SOBREPOSTO À PÁGINA) */}
-      {/* ========================================== */}
       {isCandidaturaOpen && imovelCandidatura && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -473,18 +462,18 @@ export default function PortalInquilino() {
               ) : (
                 <form onSubmit={submeterCandidatura} className="space-y-6">
                   
-                  {/* Mensagem */}
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">1. Mensagem de Apresentação</label>
                     <p className="text-xs text-slate-500 mb-2">Explica porque és o inquilino ideal para esta casa.</p>
                     <textarea 
                       required
+                      value={mensagemCandidatura}
+                      onChange={(e) => setMensagemCandidatura(e.target.value)}
                       placeholder="Ex: Olá, chamo-me Maria, trabalho como engenheira de software e procuro uma casa tranquila..."
                       className="w-full h-28 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm focus:border-sky-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 resize-none"
                     ></textarea>
                   </div>
 
-                  {/* Documentos */}
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">2. Documentos Comprovativos</label>
                     <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:bg-slate-50 hover:border-sky-300 transition-colors cursor-pointer">
@@ -507,7 +496,6 @@ export default function PortalInquilino() {
                     </div>
                   </div>
 
-                  {/* Submit */}
                   <div className="pt-4 border-t border-slate-100">
                     <button type="submit" className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-4 rounded-xl transition-all shadow-md text-lg">
                       Confirmar e Enviar Candidatura
