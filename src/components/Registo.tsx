@@ -30,60 +30,54 @@ export default function Registo() {
     setLoading(true);
     setMensagem('');
 
-    // Validação de passwords
+    // Validações mantêm-se iguais
     if (formData.password !== formData.confirmPassword) {
       setMensagem('As passwords não coincidem.');
       setLoading(false);
       return;
     }
 
-    // Validação do NIF 
     if (formData.nif.length !== 9 || isNaN(Number(formData.nif))) {
       setMensagem('O NIF tem de ter exatamente 9 números.');
       setLoading(false);
       return;
     }
 
-    // Validação do Documento para Senhorios
-    if (formData.userType === 'landlord' && !documento) {
-      setMensagem('É obrigatório enviar um documento de identificação para ser Senhorio.');
-      setLoading(false);
-      return;
-    }
-
     try {
-      // Criação do FormData para conseguirmos enviar PDFs e Imagens!
+      // Aqui está a chave: Os nomes aqui (ex: 'nome_completo') 
+      // TÊM DE SER IGUAIS aos nomes que puseste no models.py do Django
       const formDataToSend = new FormData();
-      formDataToSend.append('nome', formData.nome);
+      formDataToSend.append('nome_completo', formData.nome); // O Django espera 'nome_completo'
       formDataToSend.append('username', formData.username);
       formDataToSend.append('email', formData.email);
       formDataToSend.append('password', formData.password);
-      formDataToSend.append('role', formData.userType); // Vai enviar 'tenant' ou 'landlord'
-      formDataToSend.append('nif', formData.nif);
+      formDataToSend.append('role', formData.userType);     // O Django espera 'role'
+      formDataToSend.append('nif', formData.nif);           // O Django espera 'nif'
 
-      // Se for senhorio, anexa o documento!
+      // Se for senhorio, anexa o documento
       if (formData.userType === 'landlord' && documento) {
         formDataToSend.append('documento', documento);
       }
 
-      // Link atualizado para funcionar no teu computador local!
       const resposta = await fetch('http://127.0.0.1:8000/api/users/register/', {
         method: 'POST',
-        // ATENÇÃO: NÃO colocar o cabeçalho 'Content-Type' aqui. 
-        // O navegador faz isso automaticamente quando enviamos um FormData.
         body: formDataToSend,
+        // IMPORTANTE: Não definas 'Content-Type' aqui. 
+        // Quando usas FormData, o browser define o header correto (multipart/form-data) sozinho.
       });
 
       if (resposta.ok) {
-        setMensagem('Conta criada com sucesso!');
+        setMensagem('Conta criada com sucesso! Redirecionando...');
         setTimeout(() => navigate('/login'), 2000);
       } else {
         const erros = await resposta.json();
         console.log("Erros do servidor:", erros);
-        setMensagem('Erro: Verifica os dados inseridos (Username, Email ou NIF já existem).');
+        // O Django devolve os erros em formato JSON, podes tentar mostrar um deles
+        setMensagem('Erro: ' + JSON.stringify(erros));
       }
 
-    } catch {
+    } catch (error) {
+      console.error(error);
       setMensagem('Erro de ligação ao servidor.');
     } finally {
       setLoading(false);

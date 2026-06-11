@@ -2,17 +2,17 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 class User(AbstractUser):
-    # Definir os perfis (RBAC)
+    # Opções para o tipo de conta
     ROLE_CHOICES = (
-        ('landlord', 'Senhorio'),
         ('tenant', 'Inquilino'),
-        ('admin', 'Administrador'),
+    ('landlord', 'Senhorio'), # Agora o Django aceita 'landlord'
+    ('admin', 'Administrador'),
     )
-    
-    # Campos específicos do ArrendAI
-    nif = models.CharField(max_length=9, unique=True, null=True, blank=True)
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='tenant')
-    is_landlord_approved = models.BooleanField(default=False)
+
+    # Os nossos campos extra
+    nome_completo = models.CharField(max_length=255, blank=True, null=True)
+    nif = models.CharField(max_length=9, blank=True, null=True, unique=True)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='inquilino')
 
     def __str__(self):
-        return f"{self.username} ({self.get_role_display()})"
+        return self.username

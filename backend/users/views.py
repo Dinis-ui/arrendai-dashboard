@@ -4,20 +4,20 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
-from .serializers import UserSerializer, UserRegistrationSerializer
+from .serializers import RegisterSerializer, UserSerializer
 
 User = get_user_model()
 
 # 1. Para gerir os utilizadores em geral
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
-    serializer_class = UserSerializer
+    serializer_class = RegisterSerializer
 
 # 2. Específico para o Registo
 class UserRegistrationView(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = (AllowAny,)
-    serializer_class = UserRegistrationSerializer
+    serializer_class = RegisterSerializer
 
 # 3. Para o React ir buscar os dados de quem está logado
 @api_view(['GET'])
