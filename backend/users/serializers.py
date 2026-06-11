@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User
+from .models import User, Propriedade
 
 class RegisterSerializer(serializers.ModelSerializer):
     # A password só pode ser escrita, nunca lida (por segurança)
@@ -26,3 +26,11 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'nome_completo', 'nif', 'role']
+
+# --- NOVO: O Tradutor das Propriedades ---
+class PropriedadeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Propriedade
+        fields = ['id', 'senhorio', 'morada', 'area', 'valor_estimado', 'estado', 'data_criacao']
+        # Definimos o senhorio como "só de leitura" porque vamos preenchê-lo automaticamente no views.py
+        read_only_fields = ['senhorio', 'data_criacao']

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'; // <-- Adicionado o useEffect aqui!
+import { useState, useEffect } from 'react';
 import { 
   Building2, MapPin, ArrowLeft, Home, Banknote, Users, PenSquare,
   ImageIcon, X, CheckCircle2, Megaphone, Euro, FileText,
@@ -15,7 +15,7 @@ const dadosIniciaisPropriedades = [
     cor: 'bg-green-50 text-green-700',
     inquilino: 'Maria Ferreira',
     contratoInicio: '01 Jan 2024',
-    contratoFim: '31 Dez 2025',
+    contractoFim: '31 Dez 2025',
     imagem: 'https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=1200',
     galeria: [
       'https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -58,18 +58,15 @@ interface PropriedadesProps {
 }
 
 export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps) {
-  // Estado para armazenar as propriedades
   const [propriedades, setPropriedades] = useState<any[]>(dadosIniciaisPropriedades);
   const [propriedadeSelecionadaId, setPropriedadeSelecionadaId] = useState<number | null>(null);
   
-  // Estados dos Modais
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false); 
   const [abrirModalAnuncio, setAbrirModalAnuncio] = useState(false);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [isTenantProfileOpen, setIsTenantProfileOpen] = useState(false);
   
-  // Outros Estados
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [toastMessage, setToastMessage] = useState(''); 
   const [sucessoAnuncio, setSucessoAnuncio] = useState(false);
@@ -84,7 +81,8 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
       if (!token) return;
 
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/propriedades/', {
+        // CORRIGIDO: Rota exata mapeada no Django
+        const response = await fetch('http://127.0.0.1:8000/api/users/propriedades/', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -94,9 +92,24 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
 
         if (response.ok) {
           const dadosReais = await response.json();
-          // Se houver dados reais na BD, atualiza o ecrã com eles
+          
           if (dadosReais.length > 0) {
-            setPropriedades(dadosReais);
+            // AJUSTE: Traduz o 'valor_estimado' do Django para o teu 'preco' visual do React
+            const dadosFormatados = dadosReais.map((prop: any) => {
+              let cor = 'bg-slate-50 text-slate-700';
+              if (prop.estado === 'Alugado') cor = 'bg-green-50 text-green-700';
+              if (prop.estado === 'Vazio') cor = 'bg-amber-50 text-amber-700';
+              if (prop.estado === 'Em Obras') cor = 'bg-red-50 text-red-700';
+
+              return {
+                ...prop,
+                preco: Number(prop.valor_estimado || 0), // Converte para o teu padrão local
+                cor: prop.cor || cor,
+                imagem: prop.imagem || 'https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=1200',
+                galeria: prop.galeria || ['https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=1200']
+              };
+            });
+            setPropriedades(dadosFormatados);
           }
         }
       } catch (error) {
@@ -117,28 +130,23 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
     
     const novoEstado = formData.get('estado') as string;
 
-    // Gerar as cores e campos visuais baseados no estado
     let novaCor = 'bg-slate-50 text-slate-700';
     if (novoEstado === 'Alugado') novaCor = 'bg-green-50 text-green-700';
     if (novoEstado === 'Vazio') novaCor = 'bg-amber-50 text-amber-700';
     if (novoEstado === 'Em Obras') novaCor = 'bg-red-50 text-red-700';
 
+    // CORRIGIDO: Mapeamos o valor para 'valor_estimado' que é o que o teu DjangoSerializer espera
     const dadosParaEnviar = {
       morada: formData.get('morada') as string,
       area: Number(formData.get('area')),
-      preco: Number(formData.get('preco')),
+      valor_estimado: Number(formData.get('preco')), // Mudado de 'preco' para 'valor_estimado'
       estado: novoEstado,
-      // Se o backend aceitar estes campos podes enviar, se não o React adiciona-os depois
-      cor: novaCor,
-      inquilino: novoEstado === 'Alugado' ? 'Novo Inquilino' : null,
-      contratoInicio: novoEstado === 'Alugado' ? 'Hoje' : '-',
-      contratoFim: novoEstado === 'Alugado' ? 'Em 1 ano' : '-',
-      imagem: 'https://images.pexels.com/photos/439391/pexels-photo-439391.jpeg?auto=compress&cs=tinysrgb&w=1200'
     };
 
     if (token) {
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/propriedades/', {
+        // CORRIGIDO: Rota ajustada para bater no teu endpoint correto
+        const response = await fetch('http://127.0.0.1:8000/api/users/propriedades/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -150,26 +158,35 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
         if (response.ok) {
           const propriedadeCriadaNaBD = await response.json();
           
-          // Junta os dados que a BD devolveu com os dados visuais do React
-          const novaPropriedade = { ...dadosParaEnviar, ...propriedadeCriadaNaBD };
+          // Reconstrói o objeto visual juntando o retorno do Neon com os teus campos de imagem/estilo locais
+          const novaPropriedade = { 
+            ...propriedadeCriadaNaBD,
+            preco: Number(propriedadeCriadaNaBD.valor_estimado),
+            cor: novaCor,
+            inquilino: novoEstado === 'Alugado' ? 'Novo Inquilino' : null,
+            contratoInicio: novoEstado === 'Alugado' ? 'Hoje' : '-',
+            contratoFim: novoEstado === 'Alugado' ? 'Em 1 ano' : '-',
+            imagem: 'https://images.pexels.com/photos/439391/pexels-photo-439391.jpeg?auto=compress&cs=tinysrgb&w=1200',
+            galeria: ['https://images.pexels.com/photos/439391/pexels-photo-439391.jpeg?auto=compress&cs=tinysrgb&w=1200']
+          };
 
           setPropriedades([novaPropriedade, ...propriedades]);
           setIsAddModalOpen(false);
-          setToastMessage('Nova propriedade guardada na Base de Dados!');
+          setToastMessage('Nova propriedade guardada na Base de Dados Neon!');
           setShowSuccessToast(true);
           setTimeout(() => setShowSuccessToast(false), 3000);
         } else {
           console.error("Erro do servidor:", await response.text());
-          alert("Não foi possível gravar na base de dados. Verifica a consola.");
+          alert("Não foi possível gravar na base de dados. Confirma se o teu backend está ativo.");
         }
       } catch (error) {
         console.error("Erro de comunicação com a API:", error);
       }
     } else {
-      // Fallback local se não houver token (para conseguires testar o visual)
-      setPropriedades([{ id: Date.now(), ...dadosParaEnviar }, ...propriedades]);
+      // Fallback local caso não encontre sessão (útil para testes de UI)
+      setPropriedades([{ id: Date.now(), ...dadosParaEnviar, preco: dadosParaEnviar.valor_estimado, cor: novaCor, imagem: 'https://images.pexels.com/photos/439391/pexels-photo-439391.jpeg?auto=compress&cs=tinysrgb&w=1200' }, ...propriedades]);
       setIsAddModalOpen(false);
-      setToastMessage('Guardado localmente (Sem autenticação).');
+      setToastMessage('Guardado apenas localmente (Sem sessão ativa).');
       setShowSuccessToast(true);
       setTimeout(() => setShowSuccessToast(false), 3000);
     }
@@ -249,7 +266,6 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
     }, 2000);
   };
 
-  // Funções da Galeria
   const nextImage = (galeria: string[]) => {
     setCurrentImageIndex((prev) => (prev === galeria.length - 1 ? 0 : prev + 1));
   };
@@ -257,17 +273,13 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
     setCurrentImageIndex((prev) => (prev === 0 ? galeria.length - 1 : prev - 1));
   };
   
-  // ==========================================
-  // VISTA: DETALHES DE UMA PROPRIEDADE
-  // ==========================================
   if (propriedadeSelecionadaId !== null) {
     const prop = propriedades.find(p => p.id === propriedadeSelecionadaId);
     if (!prop) return null;
 
     return (
       <div className="animate-in fade-in slide-in-from-right-4 duration-500 pb-10 relative">
-        
-        {/* HEADER */}
+        {/* HEADER DETALHES */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <button 
@@ -297,7 +309,6 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
           </button>
         </div>
 
-      
         {/* IMAGEM E BOTÃO GALERIA */}
         <div className="w-full h-72 rounded-3xl overflow-hidden mb-8 relative group shadow-sm border border-slate-200">
           <img src={prop.imagem} alt={`Foto de ${prop.morada}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
@@ -314,9 +325,8 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
           </button>
         </div>
 
-        {/* CARDS */}
+        {/* CARDS CARACTERÍSTICAS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          
           <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm space-y-6">
             <h3 className="font-bold text-slate-800 border-b border-slate-100 pb-4">Características</h3>
             <div className="flex items-center gap-4">
@@ -349,7 +359,6 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 flex-1">
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Inquilino Atual</label>
-                  
                   <div 
                     onClick={() => {
                       if(prop.perfilInquilino) setIsTenantProfileOpen(true);
@@ -357,7 +366,7 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
                     className={`flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-4 transition-colors group ${prop.perfilInquilino ? 'cursor-pointer hover:border-sky-300 hover:bg-sky-50' : ''}`}
                   >
                     <div className="w-12 h-12 rounded-full bg-sky-200 flex items-center justify-center text-sky-800 font-bold text-lg shadow-inner group-hover:scale-105 transition-transform">
-                      {prop.inquilino?.substring(0, 2).toUpperCase()}
+                      {prop.inquilino?.substring(0, 2).toUpperCase() || "NI"}
                     </div>
                     <div>
                       <span className="block text-sm font-bold text-slate-800 group-hover:text-sky-700">{prop.inquilino}</span>
@@ -368,7 +377,6 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
                       )}
                     </div>
                   </div>
-
                 </div>
                 
                 <div className="space-y-4">
@@ -398,7 +406,7 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
           </div>
         </div>
 
-        {/* MODAL 1: FORMULÁRIO DE EDIÇÃO */}
+        {/* MODAL 1: EDITAR */}
         {isEditModalOpen && (
           <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
             <form onSubmit={handleSaveEdit} className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl">
@@ -440,7 +448,7 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
           </div>
         )}
 
-        {/* MODAL 2: GALERIA DE FOTOS */}
+        {/* MODAL 2: GALERIA */}
         {isGalleryOpen && prop.galeria && (
           <div className="fixed inset-0 bg-slate-900/95 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in zoom-in-95 duration-200">
             <button onClick={() => setIsGalleryOpen(false)} className="absolute top-6 right-6 text-white/70 hover:text-white bg-black/20 hover:bg-black/40 p-3 rounded-full transition-all">
@@ -461,7 +469,7 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
           </div>
         )}
 
-        {/* MODAL 3: PERFIL DO INQUILINO */}
+        {/* MODAL 3: INQUILINO */}
         {isTenantProfileOpen && prop.perfilInquilino && (
           <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
             <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
@@ -560,25 +568,21 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
             </div>
            </div>
         )}
-
       </div>
     );
   }
 
   // ==========================================
-  // VISTA: LISTAGEM GERAL DAS PROPRIEDADES
+  // VISTA: LISTAGEM GERAL
   // ==========================================
   return (
     <div className="animate-in fade-in duration-500 relative pb-10">
-      
-      {/* HEADER DA LISTAGEM COM O BOTÃO NOVO */}
       <div className="flex justify-between items-center mb-8">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">As Minhas Propriedades</h2>
           <p className="text-sm text-slate-500">Gere as tuas unidades físicas e ocupação.</p>
         </div>
         
-        {/* BOTÃO ADICIONAR PROPRIEDADE AQUI! */}
         <button 
           onClick={() => setIsAddModalOpen(true)}
           className="flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-sky-600/20"
@@ -605,7 +609,7 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
                 <MapPin size={14} className="text-slate-400" />
                 <span>{prop.area} m²</span>
                 <span className="mx-1 w-1 h-1 rounded-full bg-slate-300"></span>
-                <span>{prop.preco.toLocaleString('pt-PT')}€/mês</span>
+                <span>{prop.preco?.toLocaleString('pt-PT')}€/mês</span>
               </div>
             </div>
           </div>
@@ -654,7 +658,7 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
         </div>
       )}
 
-      {/* AVISO DE SUCESSO GLOBAL */}
+      {/* TOAST GLOBAL */}
       {showSuccessToast && (
         <div className="fixed bottom-10 right-10 bg-emerald-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 z-50 animate-in fade-in slide-in-from-bottom-6">
           <div className="bg-white/20 p-2 rounded-full"><CheckCircle2 size={24} className="text-white" /></div>
