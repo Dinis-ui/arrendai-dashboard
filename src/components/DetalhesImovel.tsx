@@ -19,6 +19,10 @@ export default function DetalhesImovel() {
   const [isCandidaturaOpen, setIsCandidaturaOpen] = useState(false);
   const [candidaturaEnviada, setCandidaturaEnviada] = useState(false);
   const [mensagemCandidatura, setMensagemCandidatura] = useState('');
+  
+  // ESTADOS NOVOS PARA UPLOAD DE DOCUMENTOS
+  const [ficheiros, setFicheiros] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 1. Carregar o Utilizador Logado
   useEffect(() => {
@@ -80,6 +84,7 @@ export default function DetalhesImovel() {
 
     carregarImovel();
   }, [id]);
+
   // Submeter a candidatura para o Django
   const submeterCandidatura = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,8 +127,11 @@ export default function DetalhesImovel() {
             setCandidaturaEnviada(false);
             navigate(-1); // Volta à pesquisa
           }, 3500);
-        } else {
-          alert("Não foi possível enviar a candidatura.");
+        }  else {
+          // Vamos capturar a resposta real do Django!
+          const erroDoDjango = await response.text();
+          console.error("ERRO COMPLETO DO SERVIDOR:", erroDoDjango);
+          alert(`O Django recusou a candidatura. Erro: ${erroDoDjango}`);
         }
       } catch (error) {
         console.error("Erro ao candidatar:", error);
@@ -369,6 +377,28 @@ export default function DetalhesImovel() {
                       className="w-full h-28 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm focus:border-sky-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 resize-none"
                     ></textarea>
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">2. Documentos Comprovativos</label>
+                    <input 
+                      type="file" multiple className="hidden" ref={fileInputRef} 
+                      accept=".pdf,.jpg,.jpeg,.png" 
+                      onChange={(e) => {
+                        if (e.target.files) {
+                          setFicheiros(Array.from(e.target.files));
+                        }
+                      }} 
+                    />
+                    <div 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:bg-slate-50 hover:border-sky-300 transition-colors cursor-pointer"
+                    >
+                      <UploadCloud size={28} className="mx-auto text-sky-500 mb-2" />
+                      <p className="text-sm font-medium text-slate-700">Clica para enviar ficheiros</p>
+                      {ficheiros.length > 0 && <p className="text-xs text-emerald-600 mt-2 font-bold">{ficheiros.length} ficheiro(s) selecionado(s)</p>}
+                    </div>
+                  </div>
+
                   <div className="pt-4 border-t border-slate-100">
                     <button type="submit" className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-4 rounded-xl transition-all shadow-md text-lg">
                       Confirmar e Enviar Candidatura
