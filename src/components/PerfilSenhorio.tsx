@@ -19,35 +19,27 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // ESTADOS PARA O FORMULÁRIO DE EDIÇÃO PESSAL
+  // ESTADOS PARA OS FORMULÁRIOS
   const [editUsername, setEditUsername] = useState('');
-  const [editTelefone, setEditTelefone] = useState('');
-
-  // ESTADOS PARA OS DADOS DE FATURAÇÃO (IBAN E MORADA FISCAL)
+  const [editTelefone, setEditTelefone] = useState(''); // <-- Adicionado o estado do telefone
   const [editNif, setEditNif] = useState('');
   const [editIban, setEditIban] = useState('');
   const [editMorada, setEditMorada] = useState('');
-
-  // ESTADOS PARA ALTERAR PASSWORD
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
-  // DADOS DE TESTE PARA DESIGN
-  const telefoneTemporario = '+351 912 345 678';
+  // DADOS ESTÁTICOS / TESTE
   const documentosTeste = [
     { nome: 'Cartão de Cidadão', estado: 'Verificado', cor: 'text-green-600 bg-green-50 border-green-100' },
     { nome: 'Registo Predial', estado: 'Verificado', cor: 'text-green-600 bg-green-50 border-green-100' },
     { nome: 'Certificado Energético', estado: 'Pendente', cor: 'text-amber-600 bg-amber-50 border-amber-100' },
   ];
 
-  // LÓGICA PARA CARREGAR OS DADOS DO BACKEND
+  // CARREGAR PERFIL INICIAL
   useEffect(() => {
     const carregarPerfil = async () => {
       const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
+      if (!token) { navigate('/login'); return; }
       try {
         const res = await fetch('http://127.0.0.1:8000/api/users/me/', {
           headers: { 'Authorization': `Bearer ${token}` }
@@ -55,8 +47,8 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
         if (res.ok) {
           const dados = await res.json();
           setUser(dados);
-          // Inicializa os estados com os valores atuais vindos da BD
           setEditUsername(dados.username || '');
+          setEditTelefone(dados.telefone || ''); // <-- Carrega o telefone da base de dados
           setEditNif(dados.nif || '');
           setEditIban(dados.iban || '');
           setEditMorada(dados.morada_fiscal || '');
@@ -72,11 +64,11 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
     carregarPerfil();
   }, [navigate]);
 
-  // FUNÇÃO CENTRAL PARA FAZER PATCH NO DJANGO
+  // ATUALIZAÇÃO SILENCIOSA (PATCH)
   const executarAtualizacao = async (dadosParaEnviar: object, fecharModal: () => void) => {
     const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/users/${user.id}/`, {
+      const response = await fetch('http://127.0.0.1:8000/api/users/me/', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -87,25 +79,26 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
 
       if (response.ok) {
         const dadosNovos = await response.json();
-        // Aviso removido para uma experiência mais fluida
-        setUser(dadosNovos); // Sincroniza o componente com o backend
-        fecharModal(); // Fecha o modal instantaneamente
+        setUser(dadosNovos); // Atualiza os dados instantaneamente na interface
+        fecharModal();       // Fecha o modal
       } else {
         const erro = await response.json();
-        console.error('Erro ao atualizar:', erro);
-        alert('Erro ao atualizar os dados na base de dados.');
+        console.error("Erro do servidor:", erro);
+        alert('Erro ao guardar os dados no servidor. Verifica se os dados estão corretos.');
       }
     } catch (error) {
       console.error('Erro de rede:', error);
     }
   };
 
-  // 1. Atualizar Informações de Perfil Geral
+  // ATUALIZAR PERFIL COM TELEFONE E USERNAME
   const atualizarPerfil = async () => {
-    await executarAtualizacao({ username: editUsername }, () => setIsEditOpen(false));
+    await executarAtualizacao({ 
+      username: editUsername, 
+      telefone: editTelefone 
+    }, () => setIsEditOpen(false));
   };
 
-  // 2. Atualizar Dados de Faturação, IBAN e Morada Fiscal
   const atualizarFaturacao = async () => {
     await executarAtualizacao(
       { nif: editNif, iban: editIban, morada_fiscal: editMorada }, 
@@ -113,30 +106,26 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
     );
   };
 
-  // 3. Função para Alterar a Password Real no Backend
+  // MUDANÇA DE PASSWORD (DIRETO PARA LOGIN)
   const handleAlterarPassword = async () => {
     const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/change-password/', {
+      const response = await fetch('http://127.0.0.1:8000/api/users/change-password/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          old_password: oldPassword,
-          new_password: newPassword
-        })
+        body: JSON.stringify({ old_password: oldPassword, new_password: newPassword })
       });
 
       if (response.ok) {
-        alert('Palavra-passe alterada com sucesso!');
-        setOldPassword('');
-        setNewPassword('');
-        setIsPasswordOpen(false);
+        localStorage.clear();
+        sessionStorage.clear();
+        navigate('/login');
       } else {
         const erro = await response.json();
-        alert(erro.error || 'Erro ao alterar a palavra-passe. Garanta que a senha atual está correta.');
+        alert(erro.error || 'Erro: Password atual incorreta.');
       }
     } catch (error) {
       console.error('Erro ao mudar password:', error);
@@ -149,61 +138,63 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
     navigate('/login');
   };
 
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center text-slate-500">A carregar o teu perfil...</div>;
-  }
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-slate-500">A carregar...</div>;
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-16 animate-in fade-in duration-500 relative">
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-16 relative">
       
-      {/* HEADER */}
-      <header className="bg-white border-b border-gray-200 px-8 py-6 mb-8 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
+      {/* BARRA SUPERIOR NAV */}
+      <header className="px-8 py-8">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
           <button 
             onClick={onBack}
-            className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-sky-600 transition-colors bg-slate-50 px-4 py-2 rounded-xl"
+            className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-sky-600 transition-colors bg-white border border-slate-200 px-6 py-2.5 rounded-xl shadow-sm"
           >
             <ArrowLeft size={18} /> Voltar ao Dashboard
           </button>
-          <div className="flex items-center gap-2">
-            <h1 className="font-bold text-slate-800 tracking-tight">Definições de Conta</h1>
-          </div>
+          <h1 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Definições de Conta</h1>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+      <main className="max-w-6xl mx-auto px-8">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
           
-          {/* AVATAR E AÇÕES */}
-          <div className="space-y-6">
-            <div className="bg-white rounded-3xl border border-gray-200 p-8 shadow-sm text-center">
-              <div className="w-28 h-28 bg-sky-100 rounded-full flex items-center justify-center text-sky-700 font-bold text-4xl mx-auto mb-6 border-4 border-white shadow-md uppercase">
+          {/* COLUNA ESQUERDA: AVATAR E MENU */}
+          <div className="md:col-span-4 space-y-6">
+            <div className="bg-white rounded-[2rem] border border-slate-200 p-10 shadow-sm text-center">
+              <div className="w-32 h-32 bg-sky-100 rounded-full flex items-center justify-center text-sky-700 font-bold text-5xl mx-auto mb-6 shadow-inner uppercase">
                 {user?.username ? user?.username.charAt(0) : '?'}
               </div>
-              <h2 className="text-2xl font-bold text-slate-900">{user?.username}</h2>
-              <p className="text-slate-500 font-medium text-sm mb-6">Senhorio</p>
-              <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-1.5 rounded-full text-xs font-bold border border-emerald-100">
+              <h2 className="text-3xl font-bold text-slate-900 mb-1">{user?.username}</h2>
+              <p className="text-slate-500 font-medium mb-6">Senhorio</p>
+              <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 px-5 py-2 rounded-full text-xs font-bold border border-emerald-100">
                 <Shield size={14} /> Proprietário Verificado
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl border border-gray-200 p-4 shadow-sm">
+            <div className="bg-white rounded-[2rem] border border-slate-200 p-4 shadow-sm">
               <button 
                 onClick={() => {
                   setEditUsername(user?.username || '');
-                  setEditTelefone(telefoneTemporario);
+                  setEditTelefone(user?.telefone || ''); // <-- Carrega no modal
                   setIsEditOpen(true);
-                }}
+                }} 
                 className="w-full text-left p-4 text-sm font-bold text-slate-700 hover:bg-slate-50 rounded-2xl transition-colors"
               >
                 Editar Perfil
               </button>
+              
               <button 
-                onClick={() => setIsPasswordOpen(true)}
+                onClick={() => {
+                  setOldPassword('');
+                  setNewPassword('');
+                  setIsPasswordOpen(true);
+                }} 
                 className="w-full text-left p-4 text-sm font-bold text-slate-700 hover:bg-slate-50 rounded-2xl transition-colors"
               >
                 Alterar Password
               </button>
+
               <button 
                 onClick={() => {
                   setEditNif(user?.nif || '');
@@ -215,274 +206,178 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
               >
                 Dados de Faturação
               </button>
-              <div className="h-px bg-gray-100 my-2 mx-4"></div>
-              <button 
-                onClick={terminarSessao}
-                className="w-full flex items-center gap-3 p-4 text-sm font-bold text-red-600 hover:bg-red-50 rounded-2xl transition-colors"
-              >
+              
+              <div className="h-px bg-slate-100 my-2 mx-4"></div>
+              
+              <button onClick={terminarSessao} className="w-full flex items-center gap-3 p-4 text-sm font-bold text-red-600 hover:bg-red-50 rounded-2xl transition-colors">
                 <LogOut size={18} /> Terminar Sessão
               </button>
             </div>
           </div>
 
-          {/* INFORMAÇÕES E DOCUMENTOS */}
-          <div className="md:col-span-2 space-y-8">
+          {/* COLUNA DIREITA: INFO PESSOAL E DOCS */}
+          <div className="md:col-span-8 space-y-8">
             
-            <div className="bg-white rounded-3xl border border-gray-200 p-10 shadow-sm">
-              <h3 className="text-xl font-bold text-slate-900 mb-8 flex items-center gap-2">
-                <User size={20} className="text-sky-500" /> Informação Pessoal
+            {/* INFORMAÇÃO PESSOAL CARD */}
+            <div className="bg-white rounded-[2rem] border border-slate-200 p-10 shadow-sm">
+              <h3 className="text-2xl font-bold text-slate-900 mb-10 flex items-center gap-3">
+                <User size={24} className="text-sky-500" /> Informação Pessoal
               </h3>
               
-              <div className="grid grid-cols-1 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Nome de Utilizador</label>
-                  <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-4">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome de Utilizador</label>
+                  <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex items-center gap-3">
                     <User size={18} className="text-slate-400" />
-                    <span className="text-sm font-bold text-slate-800">{user?.username}</span>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Email Profissional</label>
-                    <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-4">
-                      <Mail size={18} className="text-slate-400" />
-                      <span className="text-sm font-bold text-slate-800 truncate">{user?.email || 'Sem email registado'}</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Telefone de Contacto</label>
-                    <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-4">
-                      <Phone size={18} className="text-slate-400" />
-                      <span className="text-sm font-bold text-slate-800">{telefoneTemporario}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">NIF Associado</label>
-                    <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-4">
-                      <CreditCard size={18} className="text-slate-400" />
-                      <span className="text-sm font-bold text-slate-800">{user?.nif || 'Não configurado'}</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">IBAN para Recebimentos</label>
-                    <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-4">
-                      <CreditCard size={18} className="text-slate-400" />
-                      <span className="text-sm font-bold text-slate-800 truncate">{user?.iban || 'Não configurado'}</span>
-                    </div>
+                    <span className="font-bold text-slate-800">{user?.username}</span>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Morada Fiscal Cadastrada</label>
-                  <div className="flex items-start gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-4">
-                    <FileText size={18} className="text-slate-400 mt-0.5" />
-                    <span className="text-sm font-bold text-slate-800 whitespace-pre-line">{user?.morada_fiscal || 'Nenhuma morada fiscal associada'}</span>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Telefone de Contacto</label>
+                  <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex items-center gap-3">
+                    <Phone size={18} className="text-slate-400" />
+                    {/* Aqui mostra o telemovel real */}
+                    <span className="font-bold text-slate-800">{user?.telefone || '---'}</span> 
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email Profissional</label>
+                  <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex items-center gap-3">
+                    <Mail size={18} className="text-slate-400" />
+                    <span className="font-bold text-slate-800 truncate">{user?.email}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">NIF Associado</label>
+                  <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex items-center gap-3">
+                    <CreditCard size={18} className="text-slate-400" />
+                    <span className="font-bold text-slate-800">{user?.nif || '---'}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">IBAN para Recebimentos</label>
+                  <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex items-center gap-3">
+                    <CreditCard size={18} className="text-slate-400" />
+                    <span className="font-bold text-slate-800">{user?.iban || '---'}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Morada Fiscal Cadastrada</label>
+                  <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex items-start gap-3">
+                    <FileText size={18} className="text-slate-400 mt-1" />
+                    <span className="font-bold text-slate-800 whitespace-pre-line">{user?.morada_fiscal || '---'}</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl border border-gray-200 p-10 shadow-sm">
-              <div className="flex items-center justify-between mb-8">
-                <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                  <FileText size={20} className="text-sky-500" /> Documentação Legal
+            {/* DOCUMENTAÇÃO LEGAL CARD */}
+            <div className="bg-white rounded-[2rem] border border-slate-200 p-10 shadow-sm">
+              <div className="flex items-center justify-between mb-10">
+                <h3 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
+                  <FileText size={24} className="text-sky-500" /> Documentação Legal
                 </h3>
-                <button 
-                  onClick={() => setIsDocOpen(true)}
-                  className="text-xs font-bold text-sky-600 hover:text-sky-700 bg-sky-50 hover:bg-sky-100 px-4 py-2.5 rounded-full transition-colors"
-                >
-                  Adicionar Novo
-                </button>
+                <button className="text-xs font-bold text-sky-600 bg-sky-50 px-5 py-2.5 rounded-full hover:bg-sky-100 transition-colors">Adicionar Novo</button>
               </div>
               
               <div className="space-y-4">
                 {documentosTeste.map((doc, index) => (
-                  <div key={index} className="flex items-center justify-between p-5 border border-slate-100 rounded-2xl hover:border-slate-200 transition-colors bg-slate-50/50">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-slate-400 border border-slate-100 shadow-sm">
-                        <FileText size={20} />
+                  <div key={index} className="flex items-center justify-between p-6 border border-slate-100 rounded-[1.5rem] bg-slate-50/30">
+                    <div className="flex items-center gap-5">
+                      <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-slate-400 shadow-sm border border-slate-100">
+                        <FileText size={24} />
                       </div>
                       <div>
-                        <p className="font-bold text-slate-800 text-sm">{doc.nome}</p>
-                        <p className="text-xs text-slate-500 mt-1">Submetido a 12 Mar 2024</p>
+                        <p className="font-bold text-slate-800">{doc.nome}</p>
+                        <p className="text-xs text-slate-400 mt-1">Submetido a 12 Mar 2024</p>
                       </div>
                     </div>
-                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${doc.cor}`}>
+                    <span className={`px-5 py-1.5 rounded-full text-[10px] font-black uppercase border ${doc.cor}`}>
                       {doc.estado}
                     </span>
                   </div>
                 ))}
               </div>
-              <p className="mt-6 text-xs text-slate-500 leading-relaxed bg-sky-50 text-sky-700 p-4 rounded-xl border border-sky-100">
-                Estes documentos são utilizados pela equipa do ArrendAI para validar a sua identidade e os imóveis que regista. Anúncios com documentação verificada têm mais visibilidade na plataforma.
-              </p>
             </div>
 
           </div>
         </div>
       </main>
 
-      {/* MODAL EDITAR PERFIL */}
+      {/* --- MODAIS (LÓGICA FUNCIONAL) --- */}
+
+      {/* 1. EDITAR PERFIL */}
       {isEditOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-              <h3 className="font-bold text-lg text-slate-800">Editar Perfil</h3>
-              <button onClick={() => setIsEditOpen(false)} className="text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-full"><X size={18} /></button>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2rem] w-full max-w-md p-8 shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="font-bold text-xl">Editar Perfil</h3>
+              <button onClick={() => setIsEditOpen(false)} className="p-2 hover:bg-slate-100 rounded-full"><X size={20}/></button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Nome de Utilizador</label>
-                <input 
-                  type="text" 
-                  value={editUsername}
-                  onChange={(e) => setEditUsername(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-sky-500 outline-none" 
-                />
+                <label className="text-xs font-bold text-slate-500 uppercase">Nome de Utilizador</label>
+                <input type="text" value={editUsername} onChange={e => setEditUsername(e.target.value)} className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-sky-500" />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Telefone de Contacto</label>
-                <input 
-                  type="text" 
-                  value={editTelefone}
-                  onChange={(e) => setEditTelefone(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-sky-500 outline-none" 
-                />
+                <label className="text-xs font-bold text-slate-500 uppercase">Telemóvel</label>
+                <input type="text" value={editTelefone} onChange={e => setEditTelefone(e.target.value)} className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-sky-500" />
               </div>
             </div>
-            <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
-              <button onClick={() => setIsEditOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
-              <button onClick={atualizarPerfil} className="px-5 py-2.5 text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition-colors">Guardar Alterações</button>
+            <div className="flex gap-3 mt-8">
+              <button onClick={() => setIsEditOpen(false)} className="flex-1 py-3 font-bold text-slate-500">Cancelar</button>
+              <button onClick={atualizarPerfil} className="flex-1 py-3 bg-sky-600 text-white rounded-xl font-bold shadow-lg shadow-sky-200">Guardar</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL ALTERAR PASSWORD */}
+      {/* 2. ALTERAR PASSWORD */}
       {isPasswordOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-              <h3 className="font-bold text-lg text-slate-800">Alterar Password</h3>
-              <button onClick={() => setIsPasswordOpen(false)} className="text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-full"><X size={18} /></button>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2rem] w-full max-w-md p-8 shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="font-bold text-xl">Alterar Password</h3>
+              <button onClick={() => setIsPasswordOpen(false)} className="p-2 hover:bg-slate-100 rounded-full"><X size={20}/></button>
             </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Password Atual</label>
-                <input 
-                  type="password" 
-                  value={oldPassword}
-                  onChange={(e) => setOldPassword(e.target.value)}
-                  placeholder="••••••••" 
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-sky-500 outline-none" 
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Nova Password</label>
-                <input 
-                  type="password" 
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="••••••••" 
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-sky-500 outline-none" 
-                />
-              </div>
+            <div className="space-y-4">
+              <input type="password" placeholder="Password Atual" value={oldPassword} onChange={e => setOldPassword(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none" />
+              <input type="password" placeholder="Nova Password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none" />
             </div>
-            <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
-              <button onClick={() => setIsPasswordOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
-              <button onClick={handleAlterarPassword} className="px-5 py-2.5 text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition-colors">Atualizar Password</button>
+            <div className="flex gap-3 mt-8">
+              <button onClick={() => setIsPasswordOpen(false)} className="flex-1 py-3 font-bold text-slate-500">Cancelar</button>
+              <button onClick={handleAlterarPassword} className="flex-1 py-3 bg-sky-600 text-white rounded-xl font-bold shadow-lg shadow-sky-200">Atualizar Password</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL DADOS DE FATURAÇÃO */}
+      {/* 3. DADOS DE FATURAÇÃO */}
       {isBillingOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-              <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2"><CreditCard size={20} className="text-sky-500" /> Dados de Faturação</h3>
-              <button onClick={() => setIsBillingOpen(false)} className="text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-full"><X size={18} /></button>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2rem] w-full max-w-md p-8 shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="font-bold text-xl">Dados de Faturação</h3>
+              <button onClick={() => setIsBillingOpen(false)} className="p-2 hover:bg-slate-100 rounded-full"><X size={20}/></button>
             </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">NIF (Número de Identificação Fiscal)</label>
-                <input 
-                  type="text" 
-                  value={editNif} 
-                  onChange={(e) => setEditNif(e.target.value)}
-                  placeholder="Ex: 212 345 678" 
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-sky-500 outline-none" 
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">IBAN (Para receber rendas)</label>
-                <input 
-                  type="text" 
-                  value={editIban}
-                  onChange={(e) => setEditIban(e.target.value)}
-                  placeholder="PT50 ..." 
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-sky-500 outline-none" 
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Morada Fiscal</label>
-                <textarea 
-                  value={editMorada}
-                  onChange={(e) => setEditMorada(e.target.value)}
-                  placeholder="Morada completa" 
-                  className="w-full h-24 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-sky-500 outline-none resize-none"
-                />
-              </div>
+            <div className="space-y-4">
+              <input type="text" placeholder="NIF" value={editNif} onChange={e => setEditNif(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none" />
+              <input type="text" placeholder="IBAN" value={editIban} onChange={e => setEditIban(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none" />
+              <textarea placeholder="Morada Fiscal" value={editMorada} onChange={e => setEditMorada(e.target.value)} className="w-full h-28 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none resize-none" />
             </div>
-            <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
-              <button onClick={() => setIsBillingOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
-              <button onClick={atualizarFaturacao} className="px-5 py-2.5 text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition-colors">Guardar Dados</button>
+            <div className="flex gap-3 mt-8">
+              <button onClick={() => setIsBillingOpen(false)} className="flex-1 py-3 font-bold text-slate-500">Cancelar</button>
+              <button onClick={atualizarFaturacao} className="flex-1 py-3 bg-sky-600 text-white rounded-xl font-bold shadow-lg shadow-sky-200">Guardar Dados</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL ADICIONAR DOCUMENTO */}
-      {isDocOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-              <h3 className="font-bold text-lg text-slate-800">Adicionar Documento Legal</h3>
-              <button onClick={() => setIsDocOpen(false)} className="text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-full"><X size={18} /></button>
-            </div>
-            <div className="p-6 space-y-5">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Tipo de Documento</label>
-                <select className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-sky-500 outline-none">
-                  <option>Registo Predial (Certidão Permanente)</option>
-                  <option>Caderneta Predial Urbana</option>
-                  <option>Certificado Energético</option>
-                  <option>Outro</option>
-                </select>
-              </div>
-              
-              <div className="border-2 border-dashed border-sky-200 bg-sky-50 rounded-2xl p-8 text-center hover:bg-sky-100 transition-colors cursor-pointer group">
-                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-3 text-sky-500 group-hover:scale-110 transition-transform shadow-sm">
-                  <Upload size={20} />
-                </div>
-                <p className="text-sm font-bold text-sky-700 mb-1">Clica para fazer upload</p>
-                <p className="text-xs text-sky-600/70">PDF, JPG ou PNG (Máx 10MB)</p>
-              </div>
-            </div>
-            <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
-              <button onClick={() => setIsDocOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
-              <button onClick={() => setIsDocOpen(false)} className="px-5 py-2.5 text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition-colors">Submeter Verificação</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

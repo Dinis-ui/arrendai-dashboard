@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth import get_user_model, update_session_auth_hash
 
+# Importações dos modelos e serializers
 from .models import Propriedade
 from .serializers import RegisterSerializer, UserSerializer, PropriedadeSerializer
 
@@ -16,13 +17,13 @@ class UserViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_serializer_class(self):
-        # Se for criação (POST), usa o RegisterSerializer. Para atualizar (PATCH/PUT) ou ler, usa o UserSerializer
+        # Se for criação (POST), usa o RegisterSerializer. Para atualizar ou ler, usa o UserSerializer
         if self.action == 'create':
             return RegisterSerializer
         return UserSerializer
 
 
-# 2. Registo de Utilizadores
+# 2. Específico para o Registo
 class UserRegistrationView(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = (AllowAny,)
@@ -38,6 +39,7 @@ def utilizador_atual(request):
         return Response(serializer.data)
         
     elif request.method == 'PATCH':
+        # partial=True permite atualizar apenas alguns campos (como NIF ou IBAN)
         serializer = UserSerializer(request.user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
@@ -51,19 +53,15 @@ class PasswordResetView(APIView):
 
     def post(self, request):
         email = request.data.get('email')
-        print(f"DEBUG: Tentativa de recuperar password para o email: '{email}'")
-        
         user = User.objects.filter(email__iexact=email).first()
         
         if user:
-            print(f"DEBUG: Utilizador encontrado: {user.username}")
             return Response({"message": "Link enviado com sucesso!"}, status=status.HTTP_200_OK)
         else:
-            print("DEBUG: Utilizador não encontrado na base de dados.")
             return Response({"error": "Email não encontrado"}, status=status.HTTP_404_NOT_FOUND)
 
 
-# 5. Endpoint para Alterar Password (Logado)
+# 5. Endpoint para Alterar Password (Logado) - VERSÃO DE DEBUG
 class ChangePasswordView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -71,21 +69,23 @@ class ChangePasswordView(APIView):
         user = request.user
         old_password = request.data.get("old_password")
         new_password = request.data.get("new_password")
+        
+        print(f"DEBUG: Tentativa de mudar password do user: {user.username}")
+        print(f"DEBUG: Dados recebidos: {request.data}")
 
         if not old_password or not new_password:
+            print("DEBUG: Erro: Campos vazios")
             return Response({"error": "Ambos os campos são obrigatórios."}, status=status.HTTP_400_BAD_REQUEST)
 
         if not user.check_password(old_password):
+            print("DEBUG: Erro: Password antiga errada")
             return Response({"error": "Palavra-passe antiga incorreta"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Encripta a nova password
         user.set_password(new_password)
         user.save()
-        
-        # Impede que o utilizador perca a sessão atual
         update_session_auth_hash(request, user)
+        print("DEBUG: Sucesso! Password alterada.")
         return Response({"message": "Palavra-passe atualizada com sucesso!"}, status=status.HTTP_200_OK)
-
 
 # 6. Lógica das Propriedades (Casas)
 class PropriedadeViewSet(viewsets.ModelViewSet):
@@ -110,5 +110,4 @@ class PropriedadeViewSet(viewsets.ModelViewSet):
         ).order_by('-data_criacao')
 
     def perform_create(self, serializer):
-        # Associa o senhorio logado à casa recém-criada
         serializer.save(senhorio=self.request.user)

@@ -2,20 +2,19 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import User, Propriedade
 
+@admin.register(User)
 class CustomUserAdmin(UserAdmin):
     # Adiciona os campos personalizados do utilizador no painel de Admin
-    # Incluídos 'iban' e 'morada_fiscal' para corrigir o problema de visualização
+    # Incluído 'telefone' para corrigir o problema de visualização
     fieldsets = UserAdmin.fieldsets + (
         ('Campos ArrendAI (Personalizados)', {
-            'fields': ('role', 'nif', 'nome_completo', 'iban', 'morada_fiscal')
+            'fields': ('role', 'nif', 'nome_completo', 'telefone', 'iban', 'morada_fiscal')
         }),
     )
-    list_display = ('username', 'email', 'nome_completo', 'role', 'is_staff')
+    
+    # Adicionado 'telefone' no list_display para veres rapidamente na tabela principal
+    list_display = ('username', 'email', 'nome_completo', 'role', 'telefone', 'is_staff')
     list_filter = ('role', 'is_staff')
-
-# Registo do CustomUserAdmin existente
-admin.site.register(User, CustomUserAdmin)
-
 
 # --- Painel de Administração para as Propriedades ---
 @admin.register(Propriedade)
@@ -26,10 +25,10 @@ class PropriedadeAdmin(admin.ModelAdmin):
     # Filtros laterais para o Admin encontrar rapidamente o que está "pendente"
     list_filter = ('status_aprovacao', 'tipo_casa', 'data_criacao')
     
-    # Campos pelos quais o Admin pode pesquisar (ex: pesquisar por morada ou username do senhorio)
+    # Campos pelos quais o Admin pode pesquisar
     search_fields = ('morada', 'senhorio__username', 'senhorio__email')
     
-    # Permite ao Admin alterar o estado de aprovação diretamente na listagem, sem ter de abrir propriedade a propriedade!
+    # Permite ao Admin alterar o estado de aprovação diretamente na listagem
     list_editable = ('status_aprovacao',)
     
     # Organiza o ecrã de edição de uma propriedade em secções limpas

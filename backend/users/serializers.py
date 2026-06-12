@@ -7,8 +7,8 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        # Adicionados 'iban' e 'morada_fiscal' para permitir que o registo os receba
-        fields = ['username', 'email', 'password', 'nome_completo', 'nif', 'role', 'iban', 'morada_fiscal']
+        # Adicionado 'telefone'
+        fields = ['username', 'email', 'password', 'nome_completo', 'nif', 'telefone', 'role', 'iban', 'morada_fiscal']
 
     def create(self, validated_data):
         # Usamos o create_user para que a password seja encriptada automaticamente!
@@ -18,6 +18,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             password=validated_data['password'],
             nome_completo=validated_data.get('nome_completo', ''),
             nif=validated_data.get('nif', ''),
+            telefone=validated_data.get('telefone', ''), # <-- Novo campo
             role=validated_data.get('role', 'tenant'),
             iban=validated_data.get('iban', ''),
             morada_fiscal=validated_data.get('morada_fiscal', '')
@@ -27,8 +28,8 @@ class RegisterSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        # Expondo os novos campos para que o React os possa ler no perfil
-        fields = ['id', 'username', 'email', 'nome_completo', 'nif', 'role', 'iban', 'morada_fiscal']
+        # Adicionado 'telefone' para que a API o envie e receba
+        fields = ['id', 'username', 'email', 'nome_completo', 'nif', 'telefone', 'role', 'iban', 'morada_fiscal']
 
 # --- O Tradutor das Propriedades ---
 class PropriedadeSerializer(serializers.ModelSerializer):

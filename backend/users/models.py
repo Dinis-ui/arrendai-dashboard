@@ -14,6 +14,7 @@ class User(AbstractUser):
     nif = models.CharField(max_length=9, blank=True, null=True, unique=True)
     
     # Novos campos para o perfil do Senhorio
+    telefone = models.CharField(max_length=20, blank=True, null=True) # <-- AQUI ESTÁ O NOVO CAMPO
     iban = models.CharField(max_length=34, blank=True, null=True)
     morada_fiscal = models.TextField(blank=True, null=True)
 
