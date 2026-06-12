@@ -19,9 +19,18 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // ESTADOS PARA O FORMULÁRIO DE EDIÇÃO
+  // ESTADOS PARA O FORMULÁRIO DE EDIÇÃO PESSAL
   const [editUsername, setEditUsername] = useState('');
   const [editTelefone, setEditTelefone] = useState('');
+
+  // ESTADOS PARA OS DADOS DE FATURAÇÃO (IBAN E MORADA FISCAL)
+  const [editNif, setEditNif] = useState('');
+  const [editIban, setEditIban] = useState('');
+  const [editMorada, setEditMorada] = useState('');
+
+  // ESTADOS PARA ALTERAR PASSWORD
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
 
   // DADOS DE TESTE PARA DESIGN
   const telefoneTemporario = '+351 912 345 678';
@@ -46,6 +55,11 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
         if (res.ok) {
           const dados = await res.json();
           setUser(dados);
+          // Inicializa os estados com os valores atuais vindos da BD
+          setEditUsername(dados.username || '');
+          setEditNif(dados.nif || '');
+          setEditIban(dados.iban || '');
+          setEditMorada(dados.morada_fiscal || '');
         } else {
           terminarSessao();
         }
@@ -58,50 +72,80 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
     carregarPerfil();
   }, [navigate]);
 
-  // FUNÇÃO PARA ATUALIZAR O PERFIL NO DJANGO
-  const atualizarPerfil = async () => {
+  // FUNÇÃO CENTRAL PARA FAZER PATCH NO DJANGO
+  const executarAtualizacao = async (dadosParaEnviar: object, fecharModal: () => void) => {
     const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
-    
-    const dadosAtualizados = {
-        username: editUsername,
-        // O telefone não vai para o backend porque o teu Django não tem esse campo, 
-        // mas o nome de utilizador já vai!
-    };
-
     try {
-        const response = await fetch(`http://127.0.0.1:8000/api/users/${user.id}/`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(dadosAtualizados)
-        });
+      const response = await fetch(`http://127.0.0.1:8000/api/users/${user.id}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(dadosParaEnviar)
+      });
 
-        if (response.ok) {
-            const dadosNovos = await response.json();
-            alert('Perfil atualizado com sucesso!');
-            setUser(dadosNovos); // Atualiza o ecrã instantaneamente
-            setIsEditOpen(false); // Fecha o modal
-        } else {
-            const erro = await response.json();
-            console.error('Erro ao atualizar:', erro);
-            alert('Erro ao atualizar o perfil. Verifica a consola.');
-        }
+      if (response.ok) {
+        const dadosNovos = await response.json();
+        // Aviso removido para uma experiência mais fluida
+        setUser(dadosNovos); // Sincroniza o componente com o backend
+        fecharModal(); // Fecha o modal instantaneamente
+      } else {
+        const erro = await response.json();
+        console.error('Erro ao atualizar:', erro);
+        alert('Erro ao atualizar os dados na base de dados.');
+      }
     } catch (error) {
-        console.error('Erro de rede:', error);
+      console.error('Erro de rede:', error);
+    }
+  };
+
+  // 1. Atualizar Informações de Perfil Geral
+  const atualizarPerfil = async () => {
+    await executarAtualizacao({ username: editUsername }, () => setIsEditOpen(false));
+  };
+
+  // 2. Atualizar Dados de Faturação, IBAN e Morada Fiscal
+  const atualizarFaturacao = async () => {
+    await executarAtualizacao(
+      { nif: editNif, iban: editIban, morada_fiscal: editMorada }, 
+      () => setIsBillingOpen(false)
+    );
+  };
+
+  // 3. Função para Alterar a Password Real no Backend
+  const handleAlterarPassword = async () => {
+    const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/change-password/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          old_password: oldPassword,
+          new_password: newPassword
+        })
+      });
+
+      if (response.ok) {
+        alert('Palavra-passe alterada com sucesso!');
+        setOldPassword('');
+        setNewPassword('');
+        setIsPasswordOpen(false);
+      } else {
+        const erro = await response.json();
+        alert(erro.error || 'Erro ao alterar a palavra-passe. Garanta que a senha atual está correta.');
+      }
+    } catch (error) {
+      console.error('Erro ao mudar password:', error);
     }
   };
 
   const terminarSessao = () => {
-    // ATENÇÃO AQUI: Limpar tanto o localStorage como o sessionStorage
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('role_teste');
-    
-    sessionStorage.removeItem('accessToken');
-    sessionStorage.removeItem('refreshToken');
-    
+    localStorage.clear();
+    sessionStorage.clear();
     navigate('/login');
   };
 
@@ -161,7 +205,12 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
                 Alterar Password
               </button>
               <button 
-                onClick={() => setIsBillingOpen(true)} 
+                onClick={() => {
+                  setEditNif(user?.nif || '');
+                  setEditIban(user?.iban || '');
+                  setEditMorada(user?.morada_fiscal || '');
+                  setIsBillingOpen(true);
+                }} 
                 className="w-full text-left p-4 text-sm font-bold text-slate-700 hover:bg-slate-50 rounded-2xl transition-colors"
               >
                 Dados de Faturação
@@ -184,7 +233,7 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
                 <User size={20} className="text-sky-500" /> Informação Pessoal
               </h3>
               
-              <div className="grid grid-cols-1 gap-8">
+              <div className="grid grid-cols-1 gap-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Nome de Utilizador</label>
                   <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-4">
@@ -193,19 +242,47 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
                   </div>
                 </div>
                 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Email Profissional</label>
-                  <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-4">
-                    <Mail size={18} className="text-slate-400" />
-                    <span className="text-sm font-bold text-slate-800">{user?.email || 'Sem email registado'}</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Email Profissional</label>
+                    <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-4">
+                      <Mail size={18} className="text-slate-400" />
+                      <span className="text-sm font-bold text-slate-800 truncate">{user?.email || 'Sem email registado'}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Telefone de Contacto</label>
+                    <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-4">
+                      <Phone size={18} className="text-slate-400" />
+                      <span className="text-sm font-bold text-slate-800">{telefoneTemporario}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">NIF Associado</label>
+                    <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-4">
+                      <CreditCard size={18} className="text-slate-400" />
+                      <span className="text-sm font-bold text-slate-800">{user?.nif || 'Não configurado'}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">IBAN para Recebimentos</label>
+                    <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-4">
+                      <CreditCard size={18} className="text-slate-400" />
+                      <span className="text-sm font-bold text-slate-800 truncate">{user?.iban || 'Não configurado'}</span>
+                    </div>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Telefone de Contacto</label>
-                  <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-4">
-                    <Phone size={18} className="text-slate-400" />
-                    <span className="text-sm font-bold text-slate-800">{telefoneTemporario}</span>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Morada Fiscal Cadastrada</label>
+                  <div className="flex items-start gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-4">
+                    <FileText size={18} className="text-slate-400 mt-0.5" />
+                    <span className="text-sm font-bold text-slate-800 whitespace-pre-line">{user?.morada_fiscal || 'Nenhuma morada fiscal associada'}</span>
                   </div>
                 </div>
               </div>
@@ -251,7 +328,6 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
         </div>
       </main>
 
-      
       {/* MODAL EDITAR PERFIL */}
       {isEditOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
@@ -299,16 +375,28 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Password Atual</label>
-                <input type="password" placeholder="••••••••" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-sky-500 outline-none" />
+                <input 
+                  type="password" 
+                  value={oldPassword}
+                  onChange={(e) => setOldPassword(e.target.value)}
+                  placeholder="••••••••" 
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-sky-500 outline-none" 
+                />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Nova Password</label>
-                <input type="password" placeholder="••••••••" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-sky-500 outline-none" />
+                <input 
+                  type="password" 
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="••••••••" 
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-sky-500 outline-none" 
+                />
               </div>
             </div>
             <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
               <button onClick={() => setIsPasswordOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
-              <button onClick={() => setIsPasswordOpen(false)} className="px-5 py-2.5 text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition-colors">Atualizar Password</button>
+              <button onClick={handleAlterarPassword} className="px-5 py-2.5 text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition-colors">Atualizar Password</button>
             </div>
           </div>
         </div>
@@ -325,20 +413,37 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">NIF (Número de Identificação Fiscal)</label>
-                <input type="text" defaultValue={user?.nif || ''} placeholder="Ex: 212 345 678" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-sky-500 outline-none" />
+                <input 
+                  type="text" 
+                  value={editNif} 
+                  onChange={(e) => setEditNif(e.target.value)}
+                  placeholder="Ex: 212 345 678" 
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-sky-500 outline-none" 
+                />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">IBAN (Para receber rendas)</label>
-                <input type="text" placeholder="PT50 ..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-sky-500 outline-none" />
+                <input 
+                  type="text" 
+                  value={editIban}
+                  onChange={(e) => setEditIban(e.target.value)}
+                  placeholder="PT50 ..." 
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-sky-500 outline-none" 
+                />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Morada Fiscal</label>
-                <input type="text" placeholder="Morada completa" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-sky-500 outline-none" />
+                <textarea 
+                  value={editMorada}
+                  onChange={(e) => setEditMorada(e.target.value)}
+                  placeholder="Morada completa" 
+                  className="w-full h-24 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-sky-500 outline-none resize-none"
+                />
               </div>
             </div>
             <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
               <button onClick={() => setIsBillingOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
-              <button onClick={() => setIsBillingOpen(false)} className="px-5 py-2.5 text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition-colors">Guardar Dados</button>
+              <button onClick={atualizarFaturacao} className="px-5 py-2.5 text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition-colors">Guardar Dados</button>
             </div>
           </div>
         </div>

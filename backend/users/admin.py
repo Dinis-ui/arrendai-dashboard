@@ -1,11 +1,14 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User, Propriedade # Adicionada a importação da Propriedade
+from .models import User, Propriedade
 
 class CustomUserAdmin(UserAdmin):
     # Adiciona os campos personalizados do utilizador no painel de Admin
+    # Incluídos 'iban' e 'morada_fiscal' para corrigir o problema de visualização
     fieldsets = UserAdmin.fieldsets + (
-        ('Campos ArrendAI (Personalizados)', {'fields': ('role', 'nif', 'nome_completo')}),
+        ('Campos ArrendAI (Personalizados)', {
+            'fields': ('role', 'nif', 'nome_completo', 'iban', 'morada_fiscal')
+        }),
     )
     list_display = ('username', 'email', 'nome_completo', 'role', 'is_staff')
     list_filter = ('role', 'is_staff')
@@ -14,7 +17,7 @@ class CustomUserAdmin(UserAdmin):
 admin.site.register(User, CustomUserAdmin)
 
 
-# --- NOVO: Painel de Administração para as Propriedades ---
+# --- Painel de Administração para as Propriedades ---
 @admin.register(Propriedade)
 class PropriedadeAdmin(admin.ModelAdmin):
     # Colunas que o Admin vai ver na tabela geral de propriedades
@@ -32,7 +35,7 @@ class PropriedadeAdmin(admin.ModelAdmin):
     # Organiza o ecrã de edição de uma propriedade em secções limpas
     fieldsets = (
         ('Informação Básica', {
-            'fields': ('senhorio', 'morada', 'tipo_casa')
+            'fields': ('senhorio', 'morada', 'tipo_casa', 'foto_principal')
         }),
         ('Detalhes Financeiros e Físicos', {
             'fields': ('area', 'valor_estimado', 'estado')
