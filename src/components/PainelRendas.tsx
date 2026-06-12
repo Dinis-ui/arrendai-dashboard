@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Wallet, AlertCircle, ArrowDownCircle, CheckCircle, Download, Plus, Receipt, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function PainelRendas() {
   const [activeTab, setActiveTab] = useState<'rendas' | 'despesas'>('rendas');
@@ -36,6 +37,7 @@ export default function PainelRendas() {
 
           const rendasFormatadas = dados.map((ct: any) => ({
             id: ct.id,
+            propertyId: ct.property,
             inquilino: ct.tenant_name || `Inquilino #${ct.tenant}`,
             propriedade: ct.property_title || `Propriedade #${ct.property}`,
             vencimento: ct.start_date, // A data em que o contrato começou
@@ -163,7 +165,9 @@ export default function PainelRendas() {
                   <tr key={r.id} className="border-t border-gray-100 hover:bg-slate-50/50">
                     <td className="px-6 py-4">
                       <p className="font-bold text-slate-800">{r.inquilino}</p>
-                      <p className="text-xs text-slate-400">{r.propriedade}</p>
+                      <Link to={`/imovel/${r.propertyId}`} className="text-xs text-slate-400 hover:text-sky-600 hover:underline block mt-0.5">
+                        {r.propriedade}
+                      </Link>
                     </td>
                     <td className="px-6 py-4 font-bold text-slate-700">{r.valor.toLocaleString('pt-PT')} €</td>
                     <td className="px-6 py-4">

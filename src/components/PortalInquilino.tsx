@@ -532,7 +532,9 @@ export default function PortalInquilino() {
                         <Home size={28} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-slate-800 truncate">{cand.property_title || 'Imóvel Indisponível'}</p>
+                        <Link to={`/imovel/${cand.property}`} className="font-bold text-slate-800 truncate hover:text-sky-600 hover:underline transition-colors block">
+                          {cand.property_title || 'Imóvel Indisponível'}
+                        </Link>
                         <p className="text-sm text-slate-500 flex items-center gap-1 mt-0.5">
                           <MapPin size={12} />{cand.property_location || 'Localização não definida'}
                         </p>
@@ -581,7 +583,9 @@ export default function PortalInquilino() {
                           <Wallet size={26} />
                         </div>
                         <div>
-                          <h3 className="font-bold text-slate-800 text-lg">Contrato Ativo</h3>
+                          <Link to={`/imovel/${renda.property}`} className="font-bold text-slate-800 text-lg hover:text-sky-600 hover:underline transition-colors block">
+                            {renda.property_title || 'Contrato Ativo'}
+                          </Link>
                           <p className="text-sm text-slate-500 font-medium flex items-center gap-1.5 mt-0.5">
                             <CheckCircle size={14} className={renda.payment_status === 'pago' ? "text-emerald-500" : "text-slate-400"} /> Válido até {renda.end_date}
                           </p>
