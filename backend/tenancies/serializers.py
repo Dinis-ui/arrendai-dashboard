@@ -16,6 +16,10 @@ class ApplicationSerializer(serializers.ModelSerializer):
         read_only_fields = ['status', 'tenant'] 
 
 class TenancySerializer(serializers.ModelSerializer):
+    # MAGIA: Vai buscar os nomes reais à base de dados para a tabela do Senhorio!
+    tenant_name = serializers.CharField(source='tenant.username', read_only=True)
+    property_title = serializers.CharField(source='property.titulo_anuncio', read_only=True)
+    
     class Meta:
         model = Tenancy
         fields = '__all__'

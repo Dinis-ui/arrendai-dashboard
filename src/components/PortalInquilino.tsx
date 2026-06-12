@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Search, MapPin, Home, FileText, Wallet, Bell, ChevronDown, 
   SlidersHorizontal, Heart, ArrowUpRight, User, MessageSquare, 
-  Check, X, UploadCloud, CheckCircle, Trash2
+  Check, X, UploadCloud, CheckCircle, Trash2, CreditCard, Smartphone
 } from 'lucide-react';
 
 const menuItems = [
@@ -13,7 +13,7 @@ const menuItems = [
 ];
 
 const distritos = ['Todos', 'Lisboa', 'Porto', 'Setúbal', 'Braga', 'Coimbra', 'Faro', 'Aveiro', 'Funchal'];
-const tipologias = ['Todas', 'Apartamento', 'Moradia', 'Quarto']; // Atualizado para bater certo com a BD
+const tipologias = ['Todas', 'Apartamento', 'Moradia', 'Quarto']; 
 const precos = ['Qualquer', '500€', '750€', '1.000€', '1.500€', '2.000€', '2.500€+'];
 
 type Filters = {
@@ -48,7 +48,6 @@ function PropertyCard({ listing, onApply }: { listing: any; onApply: (imovel: an
 
   return (
     <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 group flex flex-col relative">
-      {/* O LINK VOLTOU PARA AQUI! Assim ao clicares na foto ou título vais para os detalhes */}
       <Link to={`/imovel/${listing.id}`} className="block">
         <div className="relative overflow-hidden h-48">
           <img src={listing.photo} alt={listing.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -57,7 +56,7 @@ function PropertyCard({ listing, onApply }: { listing: any; onApply: (imovel: an
           </div>
           <button
             onClick={(e) => {
-              e.preventDefault(); // Impede de abrir a página ao clicar no coração
+              e.preventDefault(); 
               e.stopPropagation();
               setSaved(!saved);
             }}
@@ -96,7 +95,7 @@ function PropertyCard({ listing, onApply }: { listing: any; onApply: (imovel: an
         <button
           onClick={(e) => {
             e.preventDefault();
-            e.stopPropagation(); // Impede de abrir a página de detalhes ao clicar em Candidatar
+            e.stopPropagation(); 
             onApply(listing);
           }}
           className="flex items-center gap-1.5 bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm"
@@ -114,7 +113,9 @@ export default function PortalInquilino() {
   // ESTADOS PRINCIPAIS
   const [user, setUser] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('Pesquisar');
-  const [listings, setListings] = useState<any[]>([]); // <-- NOVO ESTADO PARA AS CASAS REAIS
+  const [listings, setListings] = useState<any[]>([]); 
+  const [candidaturasReais, setCandidaturasReais] = useState<any[]>([]); 
+  const [rendasReais, setRendasReais] = useState<any[]>([]);
   
   // PESQUISA E FILTROS
   const [search, setSearch] = useState('');
@@ -125,7 +126,6 @@ export default function PortalInquilino() {
     areaMin: '',
   });
   
-  const [appliedIds, setAppliedIds] = useState<number[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notificacoes, setNotificacoes] = useState([
     { id: 1, titulo: 'Candidatura Aprovada!', desc: 'O senhorio aceitou a tua candidatura.', tempo: 'Há 10 min', lida: false },
@@ -140,6 +140,12 @@ export default function PortalInquilino() {
   const [mensagemCandidatura, setMensagemCandidatura] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [ficheiros, setFicheiros] = useState<File[]>([]);
+
+  // ESTADOS DO MODAL DE PAGAMENTO
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [rendaAPagar, setRendaAPagar] = useState<any>(null);
+  const [metodoPagamento, setMetodoPagamento] = useState<'mbway' | 'cartao'>('mbway');
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   // 1. CARREGAR UTILIZADOR
   useEffect(() => {
@@ -165,8 +171,7 @@ export default function PortalInquilino() {
     carregarUtilizador();
   }, [navigate]);
 
-  // 2. CARREGAR IMÓVEIS REAIS DO BACKEND (O SEGREDO DA MONTRA)
-  // 2. CARREGAR IMÓVEIS REAIS DO BACKEND (O SEGREDO DA MONTRA)
+  // 2. CARREGAR IMÓVEIS REAIS DO BACKEND
   useEffect(() => {
     const buscarImoveis = async () => {
       const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
@@ -179,8 +184,6 @@ export default function PortalInquilino() {
 
         if (response.ok) {
           const dados = await response.json();
-          
-          // Mapeamos os dados que vêm do Django para encaixar perfeitamente no teu PropertyCard visual
           const formatados = dados.map((p: any) => ({
             id: p.id,
             title: p.titulo_anuncio || `Fantástico imóvel em ${p.morada}`,
@@ -189,25 +192,113 @@ export default function PortalInquilino() {
             area: p.area,
             tipo: p.tipo_casa || 'Indisponível',
             photo: p.foto_principal || 'https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=800',
-            
-            // AQUI ESTÁ A CORREÇÃO: Lê as comodidades reais, ou usa as padrão se for nulo
             tags: (p.comodidades && typeof p.comodidades === 'string') 
                   ? p.comodidades.split(', ').slice(0, 2) 
                   : ['Verificado', 'Online'],
-                  
             available: 'Disponível Agora',
-            senhorio: p.senhorio // Se o backend retornar o ID
+            senhorio: p.senhorio 
           }));
-          
           setListings(formatados);
         }
       } catch (error) {
         console.error("Erro a carregar anúncios:", error);
       }
     };
-
     buscarImoveis();
   }, []);
+
+  // 3. CARREGAR CANDIDATURAS REAIS
+  useEffect(() => {
+    if (activeTab === 'Minhas Candidaturas') {
+      const carregarAsMinhasCandidaturas = async () => {
+        const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+        if (!token) return;
+        try {
+          const res = await fetch('http://127.0.0.1:8000/api/tenancies/applications/', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const dados = await res.json();
+            setCandidaturasReais(dados);
+          }
+        } catch (error) {
+          console.error("Erro ao carregar as candidaturas:", error);
+        }
+      };
+      carregarAsMinhasCandidaturas();
+    }
+  }, [activeTab]);
+
+  // 4. CARREGAR RENDAS (CONTRATOS ATIVOS)
+  useEffect(() => {
+    if (activeTab === 'As Minhas Rendas') {
+      const carregarRendas = async () => {
+        const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+        if (!token) return;
+        try {
+          const res = await fetch('http://127.0.0.1:8000/api/tenancies/tenancies/', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            setRendasReais(await res.json());
+          }
+        } catch (error) {
+          console.error("Erro ao carregar as rendas:", error);
+        }
+      };
+      carregarRendas();
+    }
+  }, [activeTab]);
+
+  // AÇÕES DE PAGAMENTO
+  const handleOpenPagamento = (renda: any) => {
+    setRendaAPagar(renda);
+    setIsPaymentModalOpen(true);
+  };
+
+  const processarPagamento = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsProcessingPayment(true);
+    
+    // Simular processamento bancário (1.5 segundos)
+    setTimeout(async () => {
+      const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+      try {
+        const response = await fetch(`http://127.0.0.1:8000/api/tenancies/tenancies/${rendaAPagar.id}/pay/`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+          setRendasReais(prev => prev.map(r => r.id === rendaAPagar.id ? { ...r, payment_status: 'pago' } : r));
+          setIsPaymentModalOpen(false);
+          alert("Pagamento processado com sucesso!");
+        }
+      } catch (error) {
+        alert("Erro na ligação ao banco.");
+      } finally {
+        setIsProcessingPayment(false);
+      }
+    }, 1500);
+  };
+
+  // APAGAR CANDIDATURA
+  const handleApagarCandidatura = async (id: number) => {
+    const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+    if (window.confirm("Tens a certeza que queres retirar a tua candidatura?")) {
+      try {
+        const response = await fetch(`http://127.0.0.1:8000/api/tenancies/applications/${id}/`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok || response.status === 204) {
+          setCandidaturasReais(prev => prev.filter(c => c.id !== id));
+        }
+      } catch (error) {
+        console.error("Erro ao apagar:", error);
+      }
+    }
+  };
 
   const handleOpenCandidatura = (imovel: any) => {
     setImovelCandidatura(imovel);
@@ -239,10 +330,6 @@ export default function PortalInquilino() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const removerFicheiro = (indexToRemove: number) => {
-    setFicheiros(prev => prev.filter((_, index) => index !== indexToRemove));
-  };
-
   const submeterCandidatura = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!imovelCandidatura) return;
@@ -264,27 +351,32 @@ export default function PortalInquilino() {
 
       if (response.ok) {
         setCandidaturaEnviada(true);
-        setAppliedIds((prev) => prev.includes(imovelCandidatura.id) ? prev : [...prev, imovelCandidatura.id]);
         setTimeout(() => {
           setIsCandidaturaOpen(false);
           setActiveTab('Minhas Candidaturas');
         }, 3000);
       } else {
-        alert("Erro ao enviar candidatura.");
+        const erroData = await response.json();
+        if (erroData.erro) {
+          alert(Array.isArray(erroData.erro) ? erroData.erro[0] : erroData.erro);
+        } else if (erroData.non_field_errors) {
+          alert(erroData.non_field_errors[0]); 
+        } else {
+          alert("Não foi possível enviar a candidatura. Verifica se já te candidataste a esta casa.");
+        }
       }
     } catch (error) {
       console.error("Erro na comunicação:", error);
+      alert("Erro de ligação ao servidor.");
     }
   };
 
   const setFilter = (key: keyof Filters) => (value: string) =>
     setFilters((prev) => ({ ...prev, [key]: value }));
 
-  // FILTRAGEM COM A NOVA LISTA
   const filtered = listings.filter((l) => {
     const matchSearch = search === '' || l.title.toLowerCase().includes(search.toLowerCase()) || l.location.toLowerCase().includes(search.toLowerCase());
     const matchDistrito = filters.distrito === 'Todos' || l.location.includes(filters.distrito);
-    // Tipologia agora ignora maiúsculas/minúsculas para bater certo com a BD
     const matchTipo = filters.tipologia === 'Todas' || l.tipo.toLowerCase() === filters.tipologia.toLowerCase();
     const matchPreco = filters.precoMax === 'Qualquer' || l.price <= parseInt(filters.precoMax.replace(/[^0-9]/g, ''), 10);
     const matchArea = filters.areaMin === '' || l.area >= parseInt(filters.areaMin, 10);
@@ -425,7 +517,8 @@ export default function PortalInquilino() {
           {activeTab === 'Minhas Candidaturas' && (
             <div className="p-8">
               <h2 className="text-xl font-bold text-slate-800 mb-6">Minhas Candidaturas</h2>
-              {appliedIds.length === 0 ? (
+              
+              {candidaturasReais.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-24 text-center">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4"><FileText size={28} className="text-gray-400" /></div>
                   <p className="text-slate-700 font-semibold mb-1">Sem candidaturas ainda</p>
@@ -433,16 +526,33 @@ export default function PortalInquilino() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {listings.filter((l) => appliedIds.includes(l.id)).map((l) => (
-                    <div key={l.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex items-center gap-5">
-                      <img src={l.photo} alt={l.title} className="w-20 h-16 rounded-lg object-cover flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-slate-800 truncate">{l.title}</p>
-                        <p className="text-sm text-slate-500 flex items-center gap-1 mt-0.5"><MapPin size={12} />{l.location}</p>
+                  {candidaturasReais.map((cand) => (
+                    <div key={cand.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex items-center gap-5">
+                      <div className="w-16 h-16 bg-sky-50 rounded-xl flex items-center justify-center text-sky-500 flex-shrink-0">
+                        <Home size={28} />
                       </div>
-                      <div className="text-right">
-                        <p className="font-bold text-slate-800">{l.price.toLocaleString('pt-PT')}€<span className="text-slate-400 font-normal text-sm">/mês</span></p>
-                        <span className="text-xs font-semibold text-amber-700 bg-amber-100 px-2.5 py-1 rounded-full mt-1 inline-block">Em análise</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-slate-800 truncate">{cand.property_title || 'Imóvel Indisponível'}</p>
+                        <p className="text-sm text-slate-500 flex items-center gap-1 mt-0.5">
+                          <MapPin size={12} />{cand.property_location || 'Localização não definida'}
+                        </p>
+                      </div>
+                      <div className="text-right flex items-center gap-4">
+                        <div>
+                          <p className="text-xs text-slate-400 font-medium mb-1">
+                            Enviada a: {cand.created_at ? new Date(cand.created_at).toLocaleDateString('pt-PT') : 'Recente'}
+                          </p>
+                          {(!cand.status || cand.status === 'pending') && <span className="text-xs font-bold text-amber-700 bg-amber-100 px-3 py-1.5 rounded-full inline-block">Em Análise</span>}
+                          {cand.status === 'approved' && <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-3 py-1.5 rounded-full inline-block">Aprovada</span>}
+                          {cand.status === 'rejected' && <span className="text-xs font-bold text-red-700 bg-red-100 px-3 py-1.5 rounded-full inline-block">Rejeitada</span>}
+                        </div>
+                        <button 
+                          onClick={() => handleApagarCandidatura(cand.id)}
+                          title="Retirar Candidatura"
+                          className="w-10 h-10 rounded-full border border-red-100 text-red-400 flex items-center justify-center hover:bg-red-50 hover:text-red-600 transition-colors"
+                        >
+                          <Trash2 size={18} />
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -454,11 +564,55 @@ export default function PortalInquilino() {
           {activeTab === 'As Minhas Rendas' && (
             <div className="p-8">
               <h2 className="text-xl font-bold text-slate-800 mb-6">As Minhas Rendas</h2>
-              <div className="flex flex-col items-center justify-center py-24 text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4"><Wallet size={28} className="text-gray-400" /></div>
-                <p className="text-slate-700 font-semibold mb-1">Sem contrato ativo</p>
-                <p className="text-slate-400 text-sm">Quando tiveres um arrendamento ativo, as rendas aparecerão aqui.</p>
-              </div>
+              
+              {rendasReais.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-24 text-center">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4"><Wallet size={28} className="text-gray-400" /></div>
+                  <p className="text-slate-700 font-semibold mb-1">Sem contrato ativo</p>
+                  <p className="text-slate-400 text-sm">Quando um senhorio aceitar a tua candidatura, o teu contrato aparecerá aqui.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {rendasReais.map((renda) => (
+                    <div key={renda.id} className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm flex flex-col relative overflow-hidden">
+                      <div className={`absolute top-0 right-0 w-24 h-24 rounded-bl-full -z-10 ${renda.payment_status === 'pago' ? 'bg-emerald-50' : 'bg-slate-50'}`}></div>
+                      <div className="flex items-center gap-4 mb-6">
+                        <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-inner ${renda.payment_status === 'pago' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-600'}`}>
+                          <Wallet size={26} />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-slate-800 text-lg">Contrato Ativo</h3>
+                          <p className="text-sm text-slate-500 font-medium flex items-center gap-1.5 mt-0.5">
+                            <CheckCircle size={14} className={renda.payment_status === 'pago' ? "text-emerald-500" : "text-slate-400"} /> Válido até {renda.end_date}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="border-t border-gray-100 pt-5 mt-auto flex justify-between items-center">
+                        <div>
+                          <p className="text-[10px] uppercase tracking-widest font-bold text-slate-400 mb-1">Renda Mensal</p>
+                          <span className="text-2xl font-black text-slate-800">{Number(renda.monthly_rent).toLocaleString('pt-PT')}€</span>
+                        </div>
+                        
+                        {renda.payment_status === 'pago' ? (
+                          <div className="flex flex-col items-end">
+                            <span className="text-emerald-600 font-bold flex items-center gap-1.5 bg-emerald-50 px-4 py-2 rounded-xl">
+                              <CheckCircle size={18} /> Mês Pago
+                            </span>
+                          </div>
+                        ) : (
+                          <button 
+                            onClick={() => handleOpenPagamento(renda)}
+                            className="bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors shadow-lg shadow-slate-900/20"
+                          >
+                            Pagar Renda
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -529,6 +683,84 @@ export default function PortalInquilino() {
           </div>
         </div>
       )}
+
+      {/* MODAL DE PAGAMENTO */}
+      {isPaymentModalOpen && rendaAPagar && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="bg-slate-50 border-b border-slate-200 p-6 flex justify-between items-center">
+              <div>
+                <h3 className="font-bold text-slate-900 text-xl">Pagamento de Renda</h3>
+                <p className="text-sm text-slate-500">Mês atual</p>
+              </div>
+              <button onClick={() => !isProcessingPayment && setIsPaymentModalOpen(false)} className="text-slate-400 hover:text-slate-600 bg-white border border-slate-200 p-2 rounded-full transition-colors shadow-sm">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <form onSubmit={processarPagamento} className="p-8 space-y-6">
+              <div className="text-center mb-8">
+                <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-2">Total a Pagar</p>
+                <p className="text-5xl font-black text-slate-800">{Number(rendaAPagar.monthly_rent).toLocaleString('pt-PT')}€</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                <div 
+                  onClick={() => setMetodoPagamento('mbway')}
+                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col items-center gap-2 ${metodoPagamento === 'mbway' ? 'border-sky-500 bg-sky-50 text-sky-700' : 'border-slate-200 hover:border-sky-200 text-slate-500'}`}
+                >
+                  <Smartphone size={28} className={metodoPagamento === 'mbway' ? 'text-sky-500' : 'text-slate-400'} />
+                  <span className="font-bold text-sm">MB Way</span>
+                </div>
+                <div 
+                  onClick={() => setMetodoPagamento('cartao')}
+                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col items-center gap-2 ${metodoPagamento === 'cartao' ? 'border-sky-500 bg-sky-50 text-sky-700' : 'border-slate-200 hover:border-sky-200 text-slate-500'}`}
+                >
+                  <CreditCard size={28} className={metodoPagamento === 'cartao' ? 'text-sky-500' : 'text-slate-400'} />
+                  <span className="font-bold text-sm">Cartão</span>
+                </div>
+              </div>
+
+              {metodoPagamento === 'mbway' ? (
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Nº Telemóvel associado</label>
+                  <input required type="tel" placeholder="Ex: 912 345 678" className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white text-lg tracking-wider" />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Número do Cartão</label>
+                    <input required type="text" placeholder="0000 0000 0000 0000" className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white text-lg tracking-wider" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Validade</label>
+                      <input required type="text" placeholder="MM/AA" className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white text-lg text-center tracking-wider" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">CVV</label>
+                      <input required type="text" placeholder="123" className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white text-lg text-center tracking-wider" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <button 
+                type="submit" 
+                disabled={isProcessingPayment}
+                className="w-full bg-sky-600 hover:bg-sky-700 disabled:bg-sky-400 text-white py-4 rounded-xl font-bold mt-8 shadow-lg shadow-sky-600/20 transition-all flex justify-center items-center gap-2"
+              >
+                {isProcessingPayment ? (
+                  <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Processando...</>
+                ) : (
+                  'Confirmar Pagamento Seguro'
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

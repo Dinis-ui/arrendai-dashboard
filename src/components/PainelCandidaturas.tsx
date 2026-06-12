@@ -17,7 +17,10 @@ export default function Candidaturas() {
   // =========================================================
   const carregarCandidaturas = async () => {
     const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
-    if (!token) return;
+    if (!token) {
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch('http://127.0.0.1:8000/api/tenancies/applications/', {
@@ -27,45 +30,42 @@ export default function Candidaturas() {
       if (response.ok) {
         const dados = await response.json();
         
-        // Formatar os dados que vêm do Django para caberem perfeitamente no teu layout
-        const formatadas = dados.map((cand: any) => {
-          const nome = cand.tenant_name || cand.tenant?.username || 'Inquilino';
-          const isAprovada = cand.status === 'approved';
-          const isRejeitada = cand.status === 'rejected';
-          const isPendente = cand.status === 'pending' || !cand.status;
+        // Formatar os dados e ESCONDER LOGO as que já foram rejeitadas
+        const formatadas = dados
+          .filter((cand: any) => cand.status !== 'rejected')
+          .map((cand: any) => {
+            const nome = cand.tenant_name || cand.tenant?.username || 'Inquilino';
+            const isAprovada = cand.status === 'approved';
 
-          return {
-            id: cand.id,
-            nome: nome,
-            iniciais: nome.charAt(0).toUpperCase(),
-            imovel: cand.property_title || cand.property?.titulo_anuncio || 'Imóvel Indisponível',
-            localizacao: cand.property_location || 'Localização Oculta',
-            tempo: cand.created_at ? new Date(cand.created_at).toLocaleDateString('pt-PT') : 'Recente',
-            
-            // Lógica das cores baseada no estado do Django
-            estado: isAprovada ? 'Aprovado' : isRejeitada ? 'Rejeitado' : 'Em Análise',
-            estadoCor: isAprovada ? 'text-emerald-700 bg-emerald-50' : isRejeitada ? 'text-red-700 bg-red-50' : 'text-amber-600 bg-amber-50',
-            avatarCor: 'bg-sky-50 text-sky-600',
-            
-            email: cand.tenant?.email || 'email@oculto.pt',
-            telefone: cand.tenant?.telefone || '+351 *** *** ***',
-            
-            // Aqui poderíamos ter campos reais da BD para isto no futuro, por agora assumimos a verificação
-            identidadeVerificada: true,
-            financasVerificadas: true, 
-            mensagem: cand.message || 'Candidatura submetida através do ArrendAI.'
-          };
-        });
+            return {
+              id: cand.id,
+              nome: nome,
+              iniciais: nome.charAt(0).toUpperCase(),
+              imovel: cand.property_title || cand.property?.titulo_anuncio || 'Imóvel Indisponível',
+              localizacao: cand.property_location || 'Localização Oculta',
+              tempo: cand.created_at ? new Date(cand.created_at).toLocaleDateString('pt-PT') : 'Recente',
+              estado: isAprovada ? 'Aprovado' : 'Em Análise',
+              estadoCor: isAprovada ? 'text-emerald-700 bg-emerald-50' : 'text-amber-600 bg-amber-50',
+              avatarCor: 'bg-sky-50 text-sky-600',
+              email: cand.tenant?.email || 'email@oculto.pt',
+              telefone: cand.tenant?.telefone || '+351 *** *** ***',
+              identidadeVerificada: true,
+              financasVerificadas: true, 
+              mensagem: cand.message || 'Candidatura submetida através do ArrendAI.'
+            };
+          });
 
         setCandidaturas(formatadas);
       }
     } catch (error) {
       console.error("Erro ao carregar candidaturas:", error);
     } finally {
+      // ISTO FAZ O "A CARREGAR" DESAPARECER
       setIsLoading(false);
     }
   };
 
+  // O "MOTOR DE ARRANQUE" QUE FALTAVA
   useEffect(() => {
     carregarCandidaturas();
   }, []);
@@ -84,36 +84,41 @@ export default function Candidaturas() {
     if (!token) return;
 
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/tenancies/applications/${id}/`, {
-        method: 'PATCH',
+      // MAGIA: Em vez de um PATCH normal, chama as rotas especiais do Django que criam os contratos!
+      const endpoint = novoStatus === 'approved' ? 'approve' : 'reject';
+      
+      const response = await fetch(`http://127.0.0.1:8000/api/tenancies/applications/${id}/${endpoint}/`, {
+        method: 'POST', // As nossas ações especiais usam POST
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ status: novoStatus })
+        }
       });
 
       if (response.ok) {
-        // Atualiza a lista visualmente
-        setCandidaturas(candidaturas.map(c => 
-          c.id === id ? { 
-            ...c, 
-            estado: novoStatus === 'approved' ? 'Aprovado' : 'Rejeitado', 
-            estadoCor: novoStatus === 'approved' ? 'text-emerald-700 bg-emerald-50' : 'text-red-700 bg-red-50' 
-          } : c
-        ));
+        if (novoStatus === 'rejected') {
+          // Se foi rejeitada, APAGA DO ECRÃ
+          setCandidaturas(candidaturas.filter(c => c.id !== id));
+        } else {
+          // Se foi aprovada, atualiza para verde
+          setCandidaturas(candidaturas.map(c => 
+            c.id === id ? { ...c, estado: 'Aprovado', estadoCor: 'text-emerald-700 bg-emerald-50' } : c
+          ));
+        }
         mostrarAviso(mensagemSucesso, tipoToast);
       } else {
-        mostrarAviso('Erro ao contactar o servidor.', 'erro');
+        const errorData = await response.json();
+        mostrarAviso(errorData.error || 'Erro ao contactar o servidor.', 'erro');
       }
     } catch (error) {
       console.error("Erro ao atualizar:", error);
+      mostrarAviso('Falha de ligação à internet.', 'erro');
     }
   };
 
   const handleAprovar = (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
-    atualizarStatusBD(id, 'approved', 'Candidatura aprovada! O inquilino será notificado.', 'sucesso');
+    atualizarStatusBD(id, 'approved', 'Candidatura aprovada! O contrato foi criado.', 'sucesso');
   };
 
   const handleRejeitar = (e: React.MouseEvent, id: number) => {
@@ -121,8 +126,14 @@ export default function Candidaturas() {
     atualizarStatusBD(id, 'rejected', 'Candidatura rejeitada e arquivada.', 'erro');
   };
 
+  // ECRÃ DE LOADING
   if (isLoading) {
-    return <div className="p-8 text-center text-slate-500 font-bold">A carregar candidaturas...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center py-32 text-center animate-in fade-in">
+        <div className="w-12 h-12 border-4 border-sky-200 border-t-sky-600 rounded-full animate-spin mb-4"></div>
+        <p className="text-slate-500 font-bold">A carregar candidaturas...</p>
+      </div>
+    );
   }
 
   return (
@@ -140,8 +151,8 @@ export default function Candidaturas() {
           <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
             <FileText size={32} className="text-slate-300" />
           </div>
-          <h3 className="text-lg font-bold text-slate-700 mb-1">Sem candidaturas</h3>
-          <p className="text-slate-500 text-sm max-w-md mx-auto">Ainda não recebeste candidaturas para os teus anúncios.</p>
+          <h3 className="text-lg font-bold text-slate-700 mb-1">Sem candidaturas ativas</h3>
+          <p className="text-slate-500 text-sm max-w-md mx-auto">Não tens candidaturas pendentes para rever de momento.</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -149,7 +160,7 @@ export default function Candidaturas() {
             <div 
               key={cand.id}
               onClick={() => setCandidatoSelecionado(cand)}
-              className={`bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all p-5 flex items-center justify-between cursor-pointer group ${cand.estado === 'Rejeitado' ? 'opacity-60 hover:opacity-100' : ''}`}
+              className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all p-5 flex items-center justify-between cursor-pointer group"
             >
               <div className="flex items-center gap-5">
                 <div className={`w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold ${cand.avatarCor} group-hover:scale-105 transition-transform`}>
@@ -172,7 +183,6 @@ export default function Candidaturas() {
                 <span className={`px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 ${cand.estadoCor}`}>
                   {cand.estado === 'Em Análise' && <Clock size={14} />}
                   {cand.estado === 'Aprovado' && <Check size={14} />}
-                  {cand.estado === 'Rejeitado' && <X size={14} />}
                   {cand.estado}
                 </span>
 
@@ -303,7 +313,7 @@ export default function Candidaturas() {
                 </button>
                 <button 
                   onClick={(e) => { 
-                    atualizarStatusBD(candidatoSelecionado.id, 'approved', 'Inquilino aceite! Em breve poderá assinar o contrato.', 'sucesso'); 
+                    atualizarStatusBD(candidatoSelecionado.id, 'approved', 'Inquilino aceite! O contrato de arrendamento foi ativado.', 'sucesso'); 
                     setCandidatoSelecionado(null); 
                   }}
                   className="px-8 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all shadow-lg shadow-emerald-600/20"

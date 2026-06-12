@@ -27,10 +27,12 @@ class Tenancy(models.Model):
     end_date = models.DateField()
     monthly_rent = models.DecimalField(max_digits=8, decimal_places=2)
     is_active = models.BooleanField(default=True)
+    
+    # NOVO CAMPO ADICIONADO AQUI:
+    payment_status = models.CharField(max_length=20, default='pendente') # 'pendente', 'pago', 'atraso'
 
     def __str__(self):
         return f"Contrato: {self.property.morada} ({self.tenant.username})"
-
 class Document(models.Model):
     DOC_TYPES = (
         ('identificacao', 'Cartão de Cidadão / Passaporte'),

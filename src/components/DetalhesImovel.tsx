@@ -127,14 +127,22 @@ export default function DetalhesImovel() {
             setCandidaturaEnviada(false);
             navigate(-1); // Volta à pesquisa
           }, 3500);
-        }  else {
-          // Vamos capturar a resposta real do Django!
-          const erroDoDjango = await response.text();
-          console.error("ERRO COMPLETO DO SERVIDOR:", erroDoDjango);
-          alert(`O Django recusou a candidatura. Erro: ${erroDoDjango}`);
+        } else {
+          // LÊ O ERRO QUE O DJANGO ENVIOU (O "CADEADO")
+          const erroData = await response.json();
+          
+          if (erroData.erro) {
+            // Mostra o erro exato: "Já tens uma candidatura ativa..."
+            alert(Array.isArray(erroData.erro) ? erroData.erro[0] : erroData.erro);
+          } else if (erroData.non_field_errors) {
+            alert(erroData.non_field_errors[0]); // Caso o Django envie num formato standard
+          } else {
+            alert("Não foi possível enviar a candidatura. Verifica se já te candidataste a esta casa.");
+          }
         }
       } catch (error) {
         console.error("Erro ao candidatar:", error);
+        alert("Erro de ligação ao servidor.");
       }
     }
   };
