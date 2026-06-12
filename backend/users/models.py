@@ -55,3 +55,6 @@ class Propriedade(models.Model):
 
     def __str__(self):
         return self.morada
+    
+    descricao = models.TextField(blank=True, null=True, default="Fantástico imóvel com excelentes áreas e muita luz natural. Localizado numa zona tranquila e com ótimos acessos.")
+    comodidades = models.CharField(max_length=255, blank=True, null=True, default="Cozinha Equipada, Excelente Exposição Solar, Zona Tranquila")

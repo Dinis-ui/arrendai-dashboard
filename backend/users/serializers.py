@@ -33,11 +33,13 @@ class UserSerializer(serializers.ModelSerializer):
 
 # --- O Tradutor das Propriedades ---
 class PropriedadeSerializer(serializers.ModelSerializer):
+
+    senhorio_nome = serializers.CharField(source='senhorio.username', read_only=True)
     class Meta:
         model = Propriedade
         fields = [
-            'id', 'senhorio', 'morada', 'area', 'valor_estimado', 
+            'id', 'senhorio','senhorio_nome', 'morada', 'area', 'valor_estimado', 
             'estado', 'data_criacao', 'tipo_casa', 'foto_principal', 
-            'status_aprovacao', 'anuncio_publicado', 'titulo_anuncio', 'preco_anuncio'
+            'status_aprovacao', 'anuncio_publicado', 'titulo_anuncio', 'preco_anuncio', 'descricao', 'comodidades'
         ]
         read_only_fields = ['senhorio', 'data_criacao', 'status_aprovacao']

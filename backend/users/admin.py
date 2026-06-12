@@ -34,7 +34,7 @@ class PropriedadeAdmin(admin.ModelAdmin):
     # Organiza o ecrã de edição de uma propriedade em secções limpas
     fieldsets = (
         ('Informação Básica', {
-            'fields': ('senhorio', 'morada', 'tipo_casa', 'foto_principal')
+            'fields': ('senhorio', 'morada', 'tipo_casa', 'foto_principal', 'descricao', 'comodidades')
         }),
         ('Detalhes Financeiros e Físicos', {
             'fields': ('area', 'valor_estimado', 'estado')

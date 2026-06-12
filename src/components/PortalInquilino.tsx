@@ -166,6 +166,7 @@ export default function PortalInquilino() {
   }, [navigate]);
 
   // 2. CARREGAR IMÓVEIS REAIS DO BACKEND (O SEGREDO DA MONTRA)
+  // 2. CARREGAR IMÓVEIS REAIS DO BACKEND (O SEGREDO DA MONTRA)
   useEffect(() => {
     const buscarImoveis = async () => {
       const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
@@ -188,7 +189,12 @@ export default function PortalInquilino() {
             area: p.area,
             tipo: p.tipo_casa || 'Indisponível',
             photo: p.foto_principal || 'https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=800',
-            tags: ['Verificado', 'Online'],
+            
+            // AQUI ESTÁ A CORREÇÃO: Lê as comodidades reais, ou usa as padrão se for nulo
+            tags: (p.comodidades && typeof p.comodidades === 'string') 
+                  ? p.comodidades.split(', ').slice(0, 2) 
+                  : ['Verificado', 'Online'],
+                  
             available: 'Disponível Agora',
             senhorio: p.senhorio // Se o backend retornar o ID
           }));

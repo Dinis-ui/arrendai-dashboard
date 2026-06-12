@@ -105,7 +105,7 @@ class PropriedadeViewSet(viewsets.ModelViewSet):
         
         # O Inquilino vê apenas as Aprovadas E Publicadas
         return Propriedade.objects.filter(
-            status_aprovacao='aprovado', 
+            status_aprovacao__iexact='aprovado', 
             anuncio_publicado=True
         ).order_by('-data_criacao')
 

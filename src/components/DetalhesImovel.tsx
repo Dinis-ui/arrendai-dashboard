@@ -54,7 +54,6 @@ export default function DetalhesImovel() {
         if (res.ok) {
           const data = await res.json();
           
-          // Mapeamos os dados reais para o visual do teu ecrã
           setImovel({
             id: data.id,
             title: data.titulo_anuncio || `Fantástico imóvel em ${data.morada}`,
@@ -62,15 +61,14 @@ export default function DetalhesImovel() {
             price: Number(data.preco_anuncio || data.valor_estimado),
             area: data.area,
             tipo: data.tipo_casa || 'Indisponível',
-            description: 'Excelente oportunidade de arrendamento. Entre em contacto para mais informações e submeta a sua candidatura se achar que é o inquilino ideal para este espaço!',
+            description: data.descricao || 'Excelente oportunidade de arrendamento. Entre em contacto para mais informações e submeta a sua candidatura se achar que é o inquilino ideal para este espaço!',
             photos: [
               data.foto_principal || 'https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=1200',
               'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=600',
               'https://images.pexels.com/photos/2724749/pexels-photo-2724749.jpeg?auto=compress&cs=tinysrgb&w=600'
             ],
-            amenities: ['Verificado', 'Disponível Online'],
-            // O backend devolve o ID do senhorio. Vamos meter um nome provisório até teres a relação dos perfis
-            senhorio: 'Senhorio Verificado' 
+            amenities: data.comodidades ? data.comodidades.split(', ') : ['Verificado', 'Disponível Online'],
+            senhorio: data.senhorio_nome || 'Senhorio Verificado' 
           });
         }
       } catch (error) {
@@ -82,7 +80,6 @@ export default function DetalhesImovel() {
 
     carregarImovel();
   }, [id]);
-
   // Submeter a candidatura para o Django
   const submeterCandidatura = async (e: React.FormEvent) => {
     e.preventDefault();

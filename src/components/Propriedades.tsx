@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
   Building2, MapPin, ArrowLeft, Home, Banknote, Users, PenSquare,
   ImageIcon, X, CheckCircle2, Megaphone, Euro, FileText,
-  Mail, Phone, Briefcase, Star, Calendar, ChevronLeft, ChevronRight, Plus
+  Mail, Phone, Briefcase, Star, Calendar, ChevronLeft, ChevronRight, Plus, Trash2
 } from 'lucide-react';
 
 const dadosIniciaisPropriedades = [
@@ -279,6 +279,34 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
       } catch (error) {
         console.error("Erro na ligação:", error);
       }
+    }
+  };
+// Apagar propriedade da Base de Dados
+  const apagarPropriedade = async (id: number, morada: string) => {
+    const confirmacao = window.confirm(`Tens a certeza que queres apagar o imóvel em "${morada}"? Esta ação não pode ser desfeita.`);
+    if (!confirmacao) return;
+
+    const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+    
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/users/propriedades/${id}/`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok || response.status === 204) {
+        setPropriedades(propriedades.filter(prop => prop.id !== id));
+        setToastMessage('Propriedade apagada com sucesso!');
+        setShowSuccessToast(true);
+        setTimeout(() => setShowSuccessToast(false), 3000);
+      } else {
+        alert("Não foi possível apagar a propriedade. Verifica se tens permissão.");
+      }
+    } catch (error) {
+      console.error("Erro ao apagar:", error);
+      alert("Ocorreu um erro na ligação ao servidor.");
     }
   };
 
@@ -617,7 +645,24 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
               <div className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 border border-slate-100 shadow-sm">
                 <img src={prop.imagem} alt={prop.morada} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
               </div>
-              <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${prop.cor}`}>{prop.estado}</span>
+              
+              {/* ZONA SUPERIOR DIREITA: TAG DE ESTADO E BOTAO APAGAR */}
+              <div className="flex items-center gap-2">
+                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${prop.cor}`}>
+                  {prop.estado}
+                </span>
+                
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation(); // Impede que abra os detalhes da propriedade
+                    apagarPropriedade(prop.id, prop.morada);
+                  }}
+                  className="bg-red-50 hover:bg-red-500 text-red-500 hover:text-white p-1.5 rounded-lg transition-colors"
+                  title="Apagar Imóvel"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
             </div>
             <div className="mt-auto">
               <h3 className="font-bold text-slate-800 text-lg mb-2 group-hover:text-sky-600 transition-colors">{prop.morada}</h3>
