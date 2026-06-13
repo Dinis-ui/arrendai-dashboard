@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { 
   Plus, MoreVertical, CheckCircle2, Clock, XCircle, 
-  X, MapPin, Banknote, FileText, Eye, Edit2, 
-  PauseCircle, Trash2, Home, Megaphone
+  X, MapPin, Banknote, FileText, Edit2, 
+  PauseCircle, Home, Megaphone, AlertTriangle
 } from 'lucide-react';
 
 export default function Anuncios() {
@@ -11,6 +11,7 @@ export default function Anuncios() {
   const [toastMsg, setToastMsg] = useState(''); 
   const [menuAberto, setMenuAberto] = useState<number | null>(null);
   const [anuncioSendoEditado, setAnuncioSendoEditado] = useState<any>(null);
+  const [user, setUser] = useState<any>(null);
 
   // 1. CARREGAR DADOS REAIS DO DJANGO
   const carregarDados = async () => {
@@ -18,16 +19,23 @@ export default function Anuncios() {
     if (!token) return;
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/users/propriedades/', {
+      // Carregar Propriedades
+      const resProp = await fetch('http://127.0.0.1:8000/api/users/propriedades/', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      if (resProp.ok) {
+        setPropriedadesTodas(await resProp.json());
+      }
 
-      if (response.ok) {
-        const dados = await response.json();
-        setPropriedadesTodas(dados);
+      // Carregar Utilizador para Validação KYC/Compliance
+      const resUser = await fetch('http://127.0.0.1:8000/api/users/me/', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (resUser.ok) {
+        setUser(await resUser.json());
       }
     } catch (error) {
-      console.error("Erro ao carregar propriedades:", error);
+      console.error("Erro ao carregar dados:", error);
     }
   };
 
@@ -44,7 +52,34 @@ export default function Anuncios() {
     setTimeout(() => setToastMsg(''), 3000);
   };
 
-  // 2. PAUSAR / REMOVER ANÚNCIO (Não apaga a casa, apenas a tira da montra pública)
+  // VERIFICADOR DE COMPLIANCE (KYC)
+  const verificarPerfilCompleto = () => {
+    if (!user) return false;
+    
+    // Verifica se os campos obrigatórios estão preenchidos
+    const isContaCompleta = user.telefone && user.nif && user.iban && (user.morada_fiscal || user.morada);
+    
+    if (!isContaCompleta) {
+      alert("⚠️ AÇÃO BLOQUEADA\n\nPara garantir a segurança da plataforma, precisa de ter o Perfil de Faturação completo (Telefone, NIF, IBAN e Morada Fiscal) antes de publicar anúncios.\n\nPor favor, dirija-se à secção 'Perfil' e complete os seus dados.");
+      return false;
+    }
+
+    // (Opcional: Se no futuro o Backend enviar os documentos legais no User, podias testar aqui:)
+    // const temDocumentosVerificados = user.documentos_aprovados === true;
+    // if (!temDocumentosVerificados) { ... return false; }
+
+    return true;
+  };
+
+  const abrirModalPublicacao = () => {
+    if (verificarPerfilCompleto()) {
+      setAnuncioSendoEditado(null);
+      setIsModalOpen(true);
+    }
+  };
+
+
+  // 2. PAUSAR / REMOVER ANÚNCIO
   const handleRemoverAnuncio = async (id: number) => {
     const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
     try {
@@ -54,7 +89,7 @@ export default function Anuncios() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ anuncio_publicado: false }) // Esconde o anúncio
+        body: JSON.stringify({ anuncio_publicado: false }) 
       });
 
       if (response.ok) {
@@ -72,7 +107,6 @@ export default function Anuncios() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
-    // Se for edição, usamos o ID do anúncio a editar. Se for novo, usamos o ID selecionado no dropdown.
     const propriedadeId = anuncioSendoEditado ? anuncioSendoEditado.id : formData.get('propriedade_id');
     const titulo = formData.get('titulo') as string;
     const preco = Number(formData.get('preco'));
@@ -92,14 +126,14 @@ export default function Anuncios() {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          anuncio_publicado: true, // Coloca na montra
+          anuncio_publicado: true,
           titulo_anuncio: titulo,
           preco_anuncio: preco
         })
       });
 
       if (response.ok) {
-        carregarDados(); // Atualiza a lista com o que vem da BD
+        carregarDados(); 
         fecharModal();
         mostrarAviso(anuncioSendoEditado ? 'Anúncio atualizado!' : 'Novo anúncio publicado na montra!');
       } else {
@@ -130,10 +164,7 @@ export default function Anuncios() {
         </div>
         
         <button 
-          onClick={() => {
-            setAnuncioSendoEditado(null);
-            setIsModalOpen(true);
-          }}
+          onClick={abrirModalPublicacao}
           className="flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-sky-600/20"
         >
           <Plus size={20} /> Publicar Anúncio
@@ -285,7 +316,9 @@ export default function Anuncios() {
                     </select>
                   </div>
                   {propriedadesDisponiveis.length === 0 && (
-                    <p className="text-xs text-red-500 font-medium ml-1 mt-1">Atenção: Não tens propriedades disponíveis. Cria uma no painel de "Propriedades" primeiro.</p>
+                    <p className="text-xs text-red-500 font-medium ml-1 mt-1 flex items-center gap-1">
+                      <AlertTriangle size={14} /> Não tens propriedades disponíveis. Cria uma no painel de "Propriedades".
+                    </p>
                   )}
                 </div>
               )}
