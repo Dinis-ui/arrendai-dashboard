@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Search, MapPin, Home, FileText, Wallet, Bell, ChevronDown, 
   SlidersHorizontal, Heart, ArrowUpRight, User, MessageSquare, 
-  X, UploadCloud, CheckCircle, Trash2, CreditCard, Smartphone, Lock
+  X, UploadCloud, CheckCircle, Trash2, CreditCard, Smartphone, Lock,
+  LogOut, AlertCircle
 } from 'lucide-react';
 
 const menuItems = [
@@ -118,7 +119,7 @@ export default function PortalInquilino() {
   const [rendasReais, setRendasReais] = useState<any[]>([]);
 
   // ESTADOS DO PERFIL (Abas Internas)
-  const [profileTab, setProfileTab] = useState('conta'); // 'conta' | 'seguranca'
+  const [profileTab, setProfileTab] = useState('conta'); 
   const [editUsername, setEditUsername] = useState('');
   const [editTelefone, setEditTelefone] = useState('');
   const [editNif, setEditNif] = useState('');
@@ -138,11 +139,9 @@ export default function PortalInquilino() {
     areaMin: '',
   });
   
+  // ESTADOS DE NOTIFICAÇÕES (AGORA REAIS)
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notificacoes, setNotificacoes] = useState([
-    { id: 1, titulo: 'Candidatura Aprovada!', desc: 'O senhorio aceitou a tua candidatura.', tempo: 'Há 10 min', lida: false },
-  ]);
-
+  const [notificacoes, setNotificacoes] = useState<any[]>([]);
   const naoLidas = notificacoes.filter(n => !n.lida).length;
 
   // ESTADOS DO MODAL DE CANDIDATURA
@@ -174,7 +173,6 @@ export default function PortalInquilino() {
         if (res.ok) {
           const dados = await res.json();
           setUser(dados);
-          // Preencher formulário de perfil logo que os dados chegam
           setEditUsername(dados.username || '');
           setEditTelefone(dados.telefone || '');
           setEditNif(dados.nif || '');
@@ -189,7 +187,62 @@ export default function PortalInquilino() {
     carregarUtilizador();
   }, [navigate]);
 
-  // 2A. ATUALIZAR CONTA (NOME, NIF, IBAN, ETC)
+  // VERIFICAR SE O PERFIL ESTÁ INCOMPLETO
+  const isPerfilIncompleto = user && (!user.telefone || !user.nif || !user.iban);
+
+  // 1B. CARREGAR NOTIFICAÇÕES
+  const carregarNotificacoes = async () => {
+    const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+    if (!token) return;
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/users/notificacoes/', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setNotificacoes(await res.json());
+      }
+    } catch (error) {
+      console.error("Erro a carregar notificações:", error);
+    }
+  };
+
+  useEffect(() => {
+    carregarNotificacoes();
+    // Atualiza automaticamente de 30 em 30 segundos
+    const intervalo = setInterval(carregarNotificacoes, 30000);
+    return () => clearInterval(intervalo);
+  }, []);
+
+  // 1C. MARCAR COMO LIDAS AO ABRIR O SINO
+  const handleToggleNotificacoes = async () => {
+    const newState = !showNotifications;
+    setShowNotifications(newState);
+
+    if (newState && naoLidas > 0) {
+      const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+      try {
+        await fetch('http://127.0.0.1:8000/api/users/notificacoes/lidas/', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        // Atualiza a interface instantaneamente sem esperar pela próxima pesquisa de 30s
+        setNotificacoes(prev => prev.map(n => ({ ...n, lida: true })));
+      } catch (error) {
+        console.error("Erro a marcar notificações como lidas", error);
+      }
+    }
+  };
+
+  // 1D. TERMINAR SESSÃO
+  const terminarSessao = () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    sessionStorage.removeItem('accessToken');
+    sessionStorage.removeItem('refreshToken');
+    navigate('/login');
+  };
+
+  // 2A. ATUALIZAR CONTA
   const guardarConta = async (e: React.FormEvent) => {
     e.preventDefault();
     const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
@@ -211,7 +264,7 @@ export default function PortalInquilino() {
 
       if (response.ok) {
         const dadosNovos = await response.json();
-        setUser(dadosNovos); 
+        setUser(dadosNovos); // Atualiza o utilizador e a variável isPerfilIncompleto reage na hora!
         alert("Dados guardados com sucesso!");
       } else {
         const erro = await response.json();
@@ -248,12 +301,7 @@ export default function PortalInquilino() {
 
       if (response.ok) {
         alert("Password atualizada com sucesso! Por favor, faz login novamente.");
-        // Limpar os tokens e mandar para o Login
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        sessionStorage.removeItem('accessToken');
-        sessionStorage.removeItem('refreshToken');
-        navigate('/login');
+        terminarSessao();
       } else {
         const erro = await response.json();
         alert(`Erro ao alterar password: ${JSON.stringify(erro)}`);
@@ -263,7 +311,7 @@ export default function PortalInquilino() {
     }
   };
 
-  // 3. CARREGAR IMÓVEIS REAIS DO BACKEND
+  // 3. CARREGAR IMÓVEIS REAIS
   useEffect(() => {
     const buscarImoveis = async () => {
       const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
@@ -391,8 +439,16 @@ export default function PortalInquilino() {
     }
   };
 
-  // CANDIDATURA (MODAL E ENVIO)
+  // CANDIDATURA (MODAL E ENVIO) - AGORA COM BLOQUEIO DE SEGURANÇA!
   const handleOpenCandidatura = (imovel: any) => {
+    // 🚨 Verifica se o Perfil está incompleto
+    if (isPerfilIncompleto) {
+      alert("Atenção: Precisas de completar o teu perfil (NIF, IBAN e Telefone) antes de poderes enviar uma candidatura para um imóvel.");
+      setActiveTab('Perfil');
+      setProfileTab('conta');
+      return;
+    }
+
     setImovelCandidatura(imovel);
     setMensagemCandidatura('');
     setFicheiros([]);
@@ -509,7 +565,7 @@ export default function PortalInquilino() {
           </Link>
         </nav>
 
-        {/* SIDEBAR FOOTER - Abre as Definições do Perfil */}
+        {/* SIDEBAR FOOTER */}
         <div className="p-4 border-t border-slate-800">
           <div 
             onClick={() => setActiveTab('Perfil')}
@@ -524,6 +580,10 @@ export default function PortalInquilino() {
               <p className="text-sm font-medium text-white truncate">{user ? nomeExibicao : 'A carregar...'}</p>
               <p className="text-xs text-slate-400">Inquilino</p>
             </div>
+            {/* Bolinha vermelha no perfil se faltarem dados */}
+            {isPerfilIncompleto && (
+              <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shrink-0"></div>
+            )}
           </div>
         </div>
       </aside>
@@ -537,9 +597,10 @@ export default function PortalInquilino() {
           </div>
           
           <div className="flex items-center gap-3">
+            {/* DROPDOWN DE NOTIFICAÇÕES */}
             <div className="relative">
               <button 
-                onClick={() => setShowNotifications(!showNotifications)}
+                onClick={handleToggleNotificacoes}
                 className={`p-2 rounded-full relative transition-colors ${showNotifications ? 'bg-sky-50 text-sky-600' : 'text-gray-500 hover:bg-gray-100'}`}
               >
                 <Bell size={20} />
@@ -547,7 +608,35 @@ export default function PortalInquilino() {
                   <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
                 )}
               </button>
+
+              {showNotifications && (
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                  <div className="p-4 border-b border-gray-50 flex justify-between items-center bg-slate-50">
+                    <h3 className="font-bold text-slate-800 text-sm">Notificações</h3>
+                    {naoLidas > 0 && <span className="text-xs bg-sky-100 text-sky-600 font-bold px-2 py-1 rounded-full">{naoLidas} novas</span>}
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {notificacoes.length === 0 ? (
+                      <div className="p-6 text-center text-slate-500 text-sm">
+                        <Bell size={24} className="mx-auto text-slate-300 mb-2" />
+                        Nenhuma notificação por agora.
+                      </div>
+                    ) : (
+                      notificacoes.map(notif => (
+                        <div key={notif.id} className={`p-4 border-b border-gray-50 transition-colors ${!notif.lida ? 'bg-sky-50/40' : 'hover:bg-slate-50'}`}>
+                          <p className="font-bold text-sm text-slate-800 mb-1">{notif.titulo}</p>
+                          <p className="text-xs text-slate-500 mb-2 leading-relaxed">{notif.mensagem}</p>
+                          <p className="text-[10px] text-slate-400 font-medium">
+                            {new Date(notif.criada_em).toLocaleDateString('pt-PT')} às {new Date(notif.criada_em).toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'})}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
+            
             <div 
               onClick={() => setActiveTab('Perfil')}
               className="w-9 h-9 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold text-sm uppercase shrink-0 cursor-pointer hover:ring-2 hover:ring-sky-200 transition-all"
@@ -557,14 +646,32 @@ export default function PortalInquilino() {
           </div>
         </header>
 
+        {/* ALERTA INTELIGENTE (ONBOARDING INQUILINO) */}
+        {isPerfilIncompleto && (
+          <div className="bg-amber-50 border-b border-amber-200 px-8 py-3 flex items-center justify-between z-10 relative">
+            <div className="flex items-center gap-3 text-amber-800">
+              <AlertCircle size={18} className="text-amber-500 shrink-0" />
+              <p className="text-sm font-medium">Atenção: O teu perfil está incompleto (falta NIF, IBAN ou Telefone). Precisas de preencher estes dados para te candidatares a imóveis.</p>
+            </div>
+            <button 
+              onClick={() => {
+                setActiveTab('Perfil');
+                setProfileTab('conta');
+              }}
+              className="text-xs font-bold bg-amber-200 text-amber-800 px-4 py-1.5 rounded-lg hover:bg-amber-300 transition-colors shrink-0"
+            >
+              Completar Agora
+            </button>
+          </div>
+        )}
+
         <div className="flex-1 overflow-y-auto bg-slate-50">
           
-          {/* TAB PERFIL: ESTILO SENHORIO COM MENU LATERAL INTERNO */}
+          {/* TAB PERFIL */}
           {activeTab === 'Perfil' && (
             <div className="p-8 max-w-5xl mx-auto animate-in fade-in duration-300">
               <div className="flex flex-col md:flex-row gap-8">
                 
-                {/* Menu Lateral de Definições */}
                 <div className="w-full md:w-64 flex-shrink-0">
                   <h2 className="text-2xl font-bold text-slate-800 mb-6">Definições</h2>
                   <nav className="space-y-2">
@@ -590,10 +697,19 @@ export default function PortalInquilino() {
                       <Lock size={18} />
                       Segurança
                     </button>
+
+                    <div className="h-px bg-slate-200 my-4 mx-2"></div>
+                    
+                    <button 
+                      onClick={terminarSessao} 
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-semibold text-sm text-red-600 hover:bg-red-50"
+                    >
+                      <LogOut size={18} />
+                      Terminar Sessão
+                    </button>
                   </nav>
                 </div>
 
-                {/* Área de Conteúdo */}
                 <div className="flex-1">
                   
                   {/* ABA: A MINHA CONTA */}
@@ -837,7 +953,6 @@ export default function PortalInquilino() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {rendasReais.map((renda) => (
                     <div key={renda.id} className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm flex flex-col relative overflow-hidden">
-                      {/* Cor de fundo muda se o contrato estiver inativo */}
                       <div className={`absolute top-0 right-0 w-24 h-24 rounded-bl-full -z-10 ${!renda.is_active ? 'bg-rose-50/50' : renda.payment_status === 'pago' ? 'bg-emerald-50' : 'bg-slate-50'}`}></div>
                       
                       <div className="flex items-center gap-4 mb-6">
@@ -845,7 +960,6 @@ export default function PortalInquilino() {
                           <Wallet size={26} />
                         </div>
                         <div>
-                          {/* Título dinâmico */}
                           <h3 className="font-bold text-slate-800 text-lg">
                             {renda.is_active ? 'Contrato Ativo' : 'Contrato Encerrado'}
                           </h3>
@@ -869,7 +983,6 @@ export default function PortalInquilino() {
                           <span className="text-2xl font-black text-slate-800">{Number(renda.monthly_rent).toLocaleString('pt-PT')}€</span>
                         </div>
                         
-                        {/* LÓGICA DE BOTÕES MODIFICADA AQUI: */}
                         {!renda.is_active ? (
                           <span className="text-rose-700 font-bold bg-rose-50 border border-rose-200 px-4 py-2 rounded-xl text-xs uppercase tracking-wider">
                             Arrendamento Concluído

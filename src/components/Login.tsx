@@ -1,46 +1,39 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; 
+import { Link, useNavigate, useLocation } from 'react-router-dom'; 
 
 export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [lembrar, setLembrar] = useState(false); // ESTADO PARA A CHECKBOX
+  const [lembrar, setLembrar] = useState(false);
   const [mensagem, setMensagem] = useState('');
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate(); 
+  const location = useLocation();
 
-  // <-- NOVO: VERIFICAÇÃO AUTOMÁTICA DE SESSÃO -->
+  // Quando o componente monta (ou quando o utilizador escreve /login à mão),
+  // garantimos que o estado está limpo, a não ser que tenha o "lembrar de mim" ativado
   useEffect(() => {
-    // Mal o login abre, verifica se já existe uma "chave" viva
-    const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+    // Se o utilizador não tem "Lembrar de mim", ou se forçou a navegação para /login
+    // devemos limpar a sessão para evitar logins fantasmas.
+    const hasLocalStorageToken = localStorage.getItem('accessToken');
     
-    if (token) {
-      // Se já houver token, perguntamos ao backend qual é o cargo para o deixar entrar direto
-      fetch('http://127.0.0.1:8000/api/users/me/', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      .then(res => {
-        if (res.ok) return res.json();
-        throw new Error('Token expirado');
-      })
-      .then(userData => {
-        // Sucesso! Utilizador já estava logado, salta o ecrã de login
-        if (userData.role === 'landlord') {
-          navigate('/dashboard-senhorio');
-        } else {
-          navigate('/portalinquilino');
-        }
-      })
-      .catch(() => {
-        // O token estava lá mas o Django disse que expirou. Limpar lixo.
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
+    // Se só tem no session (janela atual), limpa-o (porque significa que fechou a janela ou veio aqui parar)
+    if (!hasLocalStorageToken) {
         sessionStorage.removeItem('accessToken');
         sessionStorage.removeItem('refreshToken');
-      });
     }
-  }, [navigate]);
+  }, [location.pathname]);
+
+
+  // Função manual de emergência para limpar tudo
+  const limparLixo = () => {
+    localStorage.clear();
+    sessionStorage.clear();
+    setMensagem('Sessão fantasma limpa. Podes fazer login.');
+    setUsername('');
+    setPassword('');
+  };
 
   const fazerLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,6 +51,10 @@ export default function Login() {
       if (resposta.ok) {
         const dados = await resposta.json();
         
+        // Limpar qualquer lixo antes de gravar o novo token
+        localStorage.clear();
+        sessionStorage.clear();
+
         // Lógica "Lembrar de mim": se ativo, guarda no localStorage, senão no sessionStorage
         const storage = lembrar ? localStorage : sessionStorage;
         storage.setItem('accessToken', dados.access);
@@ -91,7 +88,16 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 font-sans text-slate-900">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 font-sans text-slate-900 relative">
+      
+      {/* Botão de Emergência para limpar a cache (útil para desenvolvimento) */}
+      <button 
+        onClick={limparLixo}
+        className="absolute top-4 right-4 text-xs font-bold text-slate-400 hover:text-red-500 transition-colors bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm"
+      >
+        Limpar Sessão
+      </button>
+
       <div className="w-full max-w-md px-6">
         <div className="mb-8 flex flex-col items-center justify-center gap-3">
           <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-sky-500 text-3xl font-bold text-white shadow-lg shadow-sky-500/30">A</div>

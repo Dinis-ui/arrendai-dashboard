@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Building2, Megaphone, Users, Wallet, MessageSquare, Search, Bell, Check } from 'lucide-react';
+import { Building2, Megaphone, Users, Wallet, MessageSquare, Search, Bell, ShieldCheck, AlertCircle } from 'lucide-react';
 
 // IMPORTAÇÃO DOS COMPONENTES
 import Anuncios from './Anuncios';
@@ -9,7 +9,6 @@ import PainelCandidaturas from './PainelCandidaturas';
 import PainelMensagens from './PainelMensagens';
 import PerfilSenhorio from './PerfilSenhorio';
 import PlanosSubscricao from './PlanosSubscricao';
-import { ShieldCheck } from 'lucide-react'; // Traz também este ícone
 
 const menuItems = [
   { name: 'Propriedades', icon: Building2 },
@@ -24,9 +23,15 @@ export default function DashboardSenhorio() {
   const [activeTab, setActiveTab] = useState('Anúncios');
   const [user, setUser] = useState<any>(null); 
   
+  // ESTADOS DAS NOTIFICAÇÕES REAIS
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notificacoes, setNotificacoes] = useState<any[]>([]);
+  const naoLidas = notificacoes.filter(n => !n.lida).length;
+
+  // 1. CARREGAR UTILIZADOR
   useEffect(() => {
     const carregarDados = async () => {
-     const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+      const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
       if (!token) return;
 
       try {
@@ -40,16 +45,52 @@ export default function DashboardSenhorio() {
       } catch (e) { console.error("Erro ao carregar utilizador:", e); }
     };
     carregarDados();
+  }, [activeTab]); // Recarrega sempre que muda de aba, para apanhar as mudanças que fizeste no Perfil
+
+  // 2. CARREGAR NOTIFICAÇÕES (Em Tempo Real)
+  const carregarNotificacoes = async () => {
+    const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+    if (!token) return;
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/users/notificacoes/', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setNotificacoes(await res.json());
+      }
+    } catch (error) {
+      console.error("Erro a carregar notificações:", error);
+    }
+  };
+
+  useEffect(() => {
+    carregarNotificacoes();
+    // Atualiza sozinho a cada 30 segundos
+    const intervalo = setInterval(carregarNotificacoes, 30000);
+    return () => clearInterval(intervalo);
   }, []);
 
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [notificacoes, setNotificacoes] = useState([
-    { id: 1, titulo: 'Nova Candidatura', desc: 'Ana Martins candidatou-se ao Quarto em Entrecampos.', tempo: 'Há 5 min', lida: false },
-    { id: 2, titulo: 'Renda Paga', desc: 'Francisco Silva pagou a renda de Maio.', tempo: 'Há 2 horas', lida: false },
-    { id: 3, titulo: 'Aviso do Sistema', desc: 'O seu anúncio T2 Cascais foi aprovado.', tempo: 'Há 1 dia', lida: true },
-  ]);
+  // 3. MARCAR NOTIFICAÇÕES COMO LIDAS AO ABRIR O SINO
+  const handleToggleNotificacoes = async () => {
+    const newState = !showNotifications;
+    setShowNotifications(newState);
 
-  const naoLidas = notificacoes.filter(n => !n.lida).length;
+    if (newState && naoLidas > 0) {
+      const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+      try {
+        await fetch('http://127.0.0.1:8000/api/users/notificacoes/lidas/', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        setNotificacoes(prev => prev.map(n => ({ ...n, lida: true })));
+      } catch (error) {
+        console.error("Erro a marcar notificações como lidas", error);
+      }
+    }
+  };
+
+  // VERIFICAR SE O PERFIL ESTÁ INCOMPLETO
+  const isPerfilIncompleto = user && (!user.telefone || !user.nif || !user.iban);
 
   if (activeTab === 'Perfil') {
     return <PerfilSenhorio onBack={() => setActiveTab('Anúncios')} />;
@@ -61,7 +102,7 @@ export default function DashboardSenhorio() {
       case 'Propriedades': return (
         <Propriedades 
           onMudarParaAnuncios={() => setActiveTab('Anúncios')} 
-          onMudarParaMensagens={() => setActiveTab('Mensagens')} // <-- AQUI ESTÁ A LIGAÇÃO NOVA!
+          onMudarParaMensagens={() => setActiveTab('Mensagens')} 
         />
       );
       case 'Candidaturas': return <PainelCandidaturas />;
@@ -105,34 +146,87 @@ export default function DashboardSenhorio() {
             onClick={() => setActiveTab('Perfil')}
             className="flex items-center gap-3 px-2 py-2 cursor-pointer hover:bg-slate-800 rounded-lg transition-colors"
           >
-            <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold uppercase">
+            <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold uppercase shrink-0">
               {user ? user?.username.charAt(0) : '?'}
             </div>
-            <div>
-              <p className="text-sm font-medium text-white truncate w-32">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate w-full">
                 {user ? user?.username : 'A carregar...'}
               </p>
               <p className="text-xs text-slate-400">
                 {user?.role === 'landlord' ? 'Senhorio' : 'Inquilino'}
               </p>
             </div>
+            {/* Bolinha vermelha no perfil se faltarem dados */}
+            {isPerfilIncompleto && (
+              <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shrink-0"></div>
+            )}
           </div>
         </div>
       </aside>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-hidden relative">
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 flex-shrink-0 relative z-20">
           <div className="relative w-96">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input type="text" placeholder="Pesquisar propriedades, inquilinos..." className="w-full pl-11 pr-4 py-2 bg-slate-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:bg-white outline-none transition-all" />
           </div>
           
-          <button onClick={() => setShowNotifications(!showNotifications)} className={`p-2 rounded-full relative transition-colors ${showNotifications ? 'bg-sky-50 text-sky-600' : 'text-gray-500 hover:bg-gray-100'}`}>
-            <Bell size={20} />
-            {naoLidas > 0 && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
-          </button>
+          {/* SININHO E DROPDOWN */}
+          <div className="relative">
+            <button 
+              onClick={handleToggleNotificacoes}
+              className={`p-2 rounded-full relative transition-colors ${showNotifications ? 'bg-sky-50 text-sky-600' : 'text-gray-500 hover:bg-gray-100'}`}
+            >
+              <Bell size={20} />
+              {naoLidas > 0 && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
+            </button>
+
+            {showNotifications && (
+              <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                <div className="p-4 border-b border-gray-50 flex justify-between items-center bg-slate-50">
+                  <h3 className="font-bold text-slate-800 text-sm">Notificações</h3>
+                  {naoLidas > 0 && <span className="text-xs bg-sky-100 text-sky-600 font-bold px-2 py-1 rounded-full">{naoLidas} novas</span>}
+                </div>
+                <div className="max-h-80 overflow-y-auto">
+                  {notificacoes.length === 0 ? (
+                    <div className="p-6 text-center text-slate-500 text-sm">
+                      <Bell size={24} className="mx-auto text-slate-300 mb-2" />
+                      Nenhuma notificação por agora.
+                    </div>
+                  ) : (
+                    notificacoes.map(notif => (
+                      <div key={notif.id} className={`p-4 border-b border-gray-50 transition-colors ${!notif.lida ? 'bg-sky-50/40' : 'hover:bg-slate-50'}`}>
+                        <p className="font-bold text-sm text-slate-800 mb-1">{notif.titulo}</p>
+                        <p className="text-xs text-slate-500 mb-2 leading-relaxed">{notif.mensagem}</p>
+                        <p className="text-[10px] text-slate-400 font-medium">
+                          {new Date(notif.criada_em).toLocaleDateString('pt-PT')} às {new Date(notif.criada_em).toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'})}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </header>
+
+        {/* ALERTA INTELIGENTE (ONBOARDING) */}
+        {isPerfilIncompleto && (
+          <div className="bg-amber-50 border-b border-amber-200 px-8 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3 text-amber-800">
+              <AlertCircle size={18} className="text-amber-500" />
+              <p className="text-sm font-medium">Atenção: O teu perfil está incompleto (falta NIF, IBAN ou Telefone). Não poderás receber pagamentos.</p>
+            </div>
+            <button 
+              onClick={() => setActiveTab('Perfil')}
+              className="text-xs font-bold bg-amber-200 text-amber-800 px-4 py-1.5 rounded-lg hover:bg-amber-300 transition-colors"
+            >
+              Completar Agora
+            </button>
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto p-8 bg-slate-50">
           {renderContent()}

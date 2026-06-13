@@ -6,9 +6,9 @@ from rest_framework.views import APIView
 from django.contrib.auth import get_user_model, update_session_auth_hash
 from rest_framework.decorators import action
 
-# Importações dos modelos e serializers
-from .models import Propriedade, PlanoSubscricao
-from .serializers import RegisterSerializer, UserSerializer, PropriedadeSerializer, PlanoSubscricaoSerializer
+# Importações dos modelos e serializers (Adicionado Notificacao e NotificacaoSerializer)
+from .models import Propriedade, PlanoSubscricao, Notificacao
+from .serializers import RegisterSerializer, UserSerializer, PropriedadeSerializer, PlanoSubscricaoSerializer, NotificacaoSerializer
 
 User = get_user_model()
 
@@ -105,6 +105,7 @@ class ChangePasswordView(APIView):
         print("DEBUG: Sucesso! Password alterada.")
         return Response({"message": "Palavra-passe atualizada com sucesso!"}, status=status.HTTP_200_OK)
 
+
 # 6. Lógica das Propriedades (Casas)
 class PropriedadeViewSet(viewsets.ModelViewSet):
     serializer_class = PropriedadeSerializer
@@ -130,20 +131,40 @@ class PropriedadeViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(senhorio=self.request.user)
 
-        def create(self, request, *args, **kwargs):
-            user = request.user
+    def create(self, request, *args, **kwargs):
+        user = request.user
         
         # Só aplicamos limites se o utilizador for senhorio e tiver um plano associado
-            if user.role == 'landlord' and user.plano:
+        if user.role == 'landlord' and user.plano:
             # Conta quantas casas este senhorio já tem
-             total_casas = Propriedade.objects.filter(senhorio=user).count()
+            total_casas = Propriedade.objects.filter(senhorio=user).count()
             
             # Compara com o limite do plano
-             if total_casas >= user.plano.max_propriedades:
-                    return Response(
-                        {'error': f'Atingiu o limite do seu plano ({user.plano.nome}). Atualize a sua subscrição para adicionar mais do que {user.plano.max_propriedades} propriedades.'},
-                        status=status.HTTP_403_FORBIDDEN
+            if total_casas >= user.plano.max_propriedades:
+                return Response(
+                    {'error': f'Atingiu o limite do seu plano ({user.plano.nome}). Atualize a sua subscrição para adicionar mais do que {user.plano.max_propriedades} propriedades.'},
+                    status=status.HTTP_403_FORBIDDEN
                 )
                 
         # Se estiver tudo ok (ou for o admin), deixa criar a propriedade normalmente
-            return super().create(request, *args, **kwargs)
+        return super().create(request, *args, **kwargs)
+
+# ==========================================
+# NOVO: VIEWS DAS NOTIFICAÇÕES
+# ==========================================
+class NotificacaoListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    # Vai buscar as notificações do utilizador logado
+    def get(self, request):
+        notificacoes = Notificacao.objects.filter(user=request.user)
+        serializer = NotificacaoSerializer(notificacoes, many=True)
+        return Response(serializer.data)
+
+class MarcarNotificacoesLidasView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    # Marca todas as notificações do utilizador como lidas
+    def post(self, request):
+        Notificacao.objects.filter(user=request.user, lida=False).update(lida=True)
+        return Response({"mensagem": "Todas as notificações marcadas como lidas."})

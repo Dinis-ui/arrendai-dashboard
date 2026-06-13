@@ -7,7 +7,9 @@ from .views import (
     PasswordResetView, 
     ChangePasswordView, 
     PropriedadeViewSet,
-    PlanoSubscricaoViewSet
+    PlanoSubscricaoViewSet,
+    NotificacaoListView,         # <-- NOVO IMPORT
+    MarcarNotificacoesLidasView  # <-- NOVO IMPORT
 ) 
 
 router = DefaultRouter()
@@ -15,6 +17,7 @@ router = DefaultRouter()
 router.register(r'propriedades', PropriedadeViewSet, basename='propriedade')
 router.register(r'users', UserViewSet, basename='user') 
 router.register(r'planos', PlanoSubscricaoViewSet, basename='planos')
+
 urlpatterns = [
     # Rotas específicas
     path('register/', UserRegistrationView.as_view(), name='register'),
@@ -23,6 +26,12 @@ urlpatterns = [
     
     # ROTA QUE ESTAVA A DAR 404
     path('change-password/', ChangePasswordView.as_view(), name='change-password'),
+    
+    # ==========================================
+    # NOVO: ROTAS DAS NOTIFICAÇÕES
+    # ==========================================
+    path('notificacoes/', NotificacaoListView.as_view(), name='listar_notificacoes'),
+    path('notificacoes/lidas/', MarcarNotificacoesLidasView.as_view(), name='marcar_lidas'),
     
     # Rotas do Router
     path('', include(router.urls)),

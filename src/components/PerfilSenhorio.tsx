@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Mail, Phone, Shield, FileText, LogOut, ArrowLeft, X, Upload, CreditCard } from 'lucide-react';
+import { User, Mail, Phone, Shield, FileText, LogOut, ArrowLeft, X, Upload, CreditCard, Bell } from 'lucide-react';
 
 interface PerfilProps {
   onBack: () => void;
@@ -21,12 +21,17 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
 
   // ESTADOS PARA OS FORMULÁRIOS
   const [editUsername, setEditUsername] = useState('');
-  const [editTelefone, setEditTelefone] = useState(''); // <-- Adicionado o estado do telefone
+  const [editTelefone, setEditTelefone] = useState(''); 
   const [editNif, setEditNif] = useState('');
   const [editIban, setEditIban] = useState('');
   const [editMorada, setEditMorada] = useState('');
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+
+  // ESTADOS DE NOTIFICAÇÕES (REAIS)
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notificacoes, setNotificacoes] = useState<any[]>([]);
+  const naoLidas = notificacoes.filter(n => !n.lida).length;
 
   // DADOS ESTÁTICOS / TESTE
   const documentosTeste = [
@@ -48,7 +53,7 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
           const dados = await res.json();
           setUser(dados);
           setEditUsername(dados.username || '');
-          setEditTelefone(dados.telefone || ''); // <-- Carrega o telefone da base de dados
+          setEditTelefone(dados.telefone || ''); 
           setEditNif(dados.nif || '');
           setEditIban(dados.iban || '');
           setEditMorada(dados.morada_fiscal || '');
@@ -63,6 +68,48 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
     };
     carregarPerfil();
   }, [navigate]);
+
+  // CARREGAR NOTIFICAÇÕES DO SENHORIO
+  const carregarNotificacoes = async () => {
+    const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+    if (!token) return;
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/users/notificacoes/', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setNotificacoes(await res.json());
+      }
+    } catch (error) {
+      console.error("Erro a carregar notificações:", error);
+    }
+  };
+
+  useEffect(() => {
+    carregarNotificacoes();
+    // Atualiza automaticamente de 30 em 30 segundos
+    const intervalo = setInterval(carregarNotificacoes, 30000);
+    return () => clearInterval(intervalo);
+  }, []);
+
+  // MARCAR COMO LIDAS AO ABRIR O SINO
+  const handleToggleNotificacoes = async () => {
+    const newState = !showNotifications;
+    setShowNotifications(newState);
+
+    if (newState && naoLidas > 0) {
+      const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+      try {
+        await fetch('http://127.0.0.1:8000/api/users/notificacoes/lidas/', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        setNotificacoes(prev => prev.map(n => ({ ...n, lida: true })));
+      } catch (error) {
+        console.error("Erro a marcar notificações como lidas", error);
+      }
+    }
+  };
 
   // ATUALIZAÇÃO SILENCIOSA (PATCH)
   const executarAtualizacao = async (dadosParaEnviar: object, fecharModal: () => void) => {
@@ -152,7 +199,50 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
           >
             <ArrowLeft size={18} /> Voltar ao Dashboard
           </button>
-          <h1 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Definições de Conta</h1>
+          
+          <div className="flex items-center gap-6">
+            <h1 className="text-sm font-bold text-slate-800 uppercase tracking-widest hidden md:block">Definições de Conta</h1>
+            
+            {/* DROPDOWN DE NOTIFICAÇÕES */}
+            <div className="relative">
+              <button 
+                onClick={handleToggleNotificacoes}
+                className={`p-2 rounded-full relative transition-colors ${showNotifications ? 'bg-sky-50 text-sky-600' : 'bg-white border border-slate-200 text-gray-500 hover:bg-gray-50 shadow-sm'}`}
+              >
+                <Bell size={18} />
+                {naoLidas > 0 && (
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
+                )}
+              </button>
+
+              {showNotifications && (
+                <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                  <div className="p-4 border-b border-gray-50 flex justify-between items-center bg-slate-50">
+                    <h3 className="font-bold text-slate-800 text-sm">Notificações</h3>
+                    {naoLidas > 0 && <span className="text-xs bg-sky-100 text-sky-600 font-bold px-2 py-1 rounded-full">{naoLidas} novas</span>}
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {notificacoes.length === 0 ? (
+                      <div className="p-6 text-center text-slate-500 text-sm">
+                        <Bell size={24} className="mx-auto text-slate-300 mb-2" />
+                        Nenhuma notificação por agora.
+                      </div>
+                    ) : (
+                      notificacoes.map(notif => (
+                        <div key={notif.id} className={`p-4 border-b border-gray-50 transition-colors ${!notif.lida ? 'bg-sky-50/40' : 'hover:bg-slate-50'}`}>
+                          <p className="font-bold text-sm text-slate-800 mb-1">{notif.titulo}</p>
+                          <p className="text-xs text-slate-500 mb-2 leading-relaxed">{notif.mensagem}</p>
+                          <p className="text-[10px] text-slate-400 font-medium">
+                            {new Date(notif.criada_em).toLocaleDateString('pt-PT')} às {new Date(notif.criada_em).toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'})}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </header>
 
@@ -237,7 +327,6 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Telefone de Contacto</label>
                   <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex items-center gap-3">
                     <Phone size={18} className="text-slate-400" />
-                    {/* Aqui mostra o telemovel real */}
                     <span className="font-bold text-slate-800">{user?.telefone || '---'}</span> 
                   </div>
                 </div>
@@ -330,8 +419,8 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
               </div>
             </div>
             <div className="flex gap-3 mt-8">
-              <button onClick={() => setIsEditOpen(false)} className="flex-1 py-3 font-bold text-slate-500">Cancelar</button>
-              <button onClick={atualizarPerfil} className="flex-1 py-3 bg-sky-600 text-white rounded-xl font-bold shadow-lg shadow-sky-200">Guardar</button>
+              <button onClick={() => setIsEditOpen(false)} className="flex-1 py-3 font-bold text-slate-500 hover:bg-slate-50 rounded-xl">Cancelar</button>
+              <button onClick={atualizarPerfil} className="flex-1 py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-bold shadow-lg shadow-sky-200 transition-colors">Guardar</button>
             </div>
           </div>
         </div>
@@ -350,8 +439,8 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
               <input type="password" placeholder="Nova Password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none" />
             </div>
             <div className="flex gap-3 mt-8">
-              <button onClick={() => setIsPasswordOpen(false)} className="flex-1 py-3 font-bold text-slate-500">Cancelar</button>
-              <button onClick={handleAlterarPassword} className="flex-1 py-3 bg-sky-600 text-white rounded-xl font-bold shadow-lg shadow-sky-200">Atualizar Password</button>
+              <button onClick={() => setIsPasswordOpen(false)} className="flex-1 py-3 font-bold text-slate-500 hover:bg-slate-50 rounded-xl">Cancelar</button>
+              <button onClick={handleAlterarPassword} className="flex-1 py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-bold shadow-lg shadow-sky-200 transition-colors">Atualizar Password</button>
             </div>
           </div>
         </div>
@@ -371,8 +460,8 @@ export default function PerfilSenhorio({ onBack }: PerfilProps) {
               <textarea placeholder="Morada Fiscal" value={editMorada} onChange={e => setEditMorada(e.target.value)} className="w-full h-28 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none resize-none" />
             </div>
             <div className="flex gap-3 mt-8">
-              <button onClick={() => setIsBillingOpen(false)} className="flex-1 py-3 font-bold text-slate-500">Cancelar</button>
-              <button onClick={atualizarFaturacao} className="flex-1 py-3 bg-sky-600 text-white rounded-xl font-bold shadow-lg shadow-sky-200">Guardar Dados</button>
+              <button onClick={() => setIsBillingOpen(false)} className="flex-1 py-3 font-bold text-slate-500 hover:bg-slate-50 rounded-xl">Cancelar</button>
+              <button onClick={atualizarFaturacao} className="flex-1 py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-bold shadow-lg shadow-sky-200 transition-colors">Guardar Dados</button>
             </div>
           </div>
         </div>
