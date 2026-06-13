@@ -112,38 +112,48 @@ class PropriedadeViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        
-        # O Admin vê tudo
-        if user.is_staff or user.role == 'admin':
-            return Propriedade.objects.all().order_by('-data_criacao')
-            
-        # O Senhorio vê as dele
-        if user.role == 'senhorio' or user.role == 'landlord':
+        if user.role == 'landlord':
             return Propriedade.objects.filter(senhorio=user).order_by('-data_criacao')
-        
-        # O Inquilino vê apenas as Aprovadas E Publicadas
         return Propriedade.objects.filter(
-            status_aprovacao__iexact='aprovado', 
+            status_aprovacao__iexact='aprovado',
             anuncio_publicado=True
         ).order_by('-data_criacao')
 
-    def perform_create(self, serializer):
-        serializer.save(senhorio=self.request.user)
-
-        def create(self, request, *args, **kwargs):
-            user = request.user
+    # RESTRIÇÃO 1: Limite de Propriedades Criadas
+    def create(self, request, *args, **kwargs):
+        user = request.user
         
-        # Só aplicamos limites se o utilizador for senhorio e tiver um plano associado
-            if user.role == 'landlord' and user.plano:
-            # Conta quantas casas este senhorio já tem
-             total_casas = Propriedade.objects.filter(senhorio=user).count()
-            
-            # Compara com o limite do plano
-             if total_casas >= user.plano.max_propriedades:
-                    return Response(
-                        {'error': f'Atingiu o limite do seu plano ({user.plano.nome}). Atualize a sua subscrição para adicionar mais do que {user.plano.max_propriedades} propriedades.'},
-                        status=status.HTTP_403_FORBIDDEN
+        if user.role == 'landlord':
+            if not user.plano:
+                return Response({'error': 'A sua conta não tem um plano ativo. Por favor, adira ao plano Grátis na secção "Meu Plano".'}, status=status.HTTP_403_FORBIDDEN)
+                
+            total_casas = Propriedade.objects.filter(senhorio=user).count()
+            if total_casas >= user.plano.max_propriedades:
+                return Response(
+                    {'error': f'Atingiu o limite de propriedades ({user.plano.max_propriedades}) do seu plano {user.plano.nome}. Faça upgrade para adicionar mais!'},
+                    status=status.HTTP_403_FORBIDDEN
                 )
                 
-        # Se estiver tudo ok (ou for o admin), deixa criar a propriedade normalmente
-            return super().create(request, *args, **kwargs)
+        return super().create(request, *args, **kwargs)
+
+    # RESTRIÇÃO 2: Limite de Anúncios Ativos
+    def partial_update(self, request, *args, **kwargs):
+        # Deteta se o utilizador está a tentar publicar um anúncio
+        if request.data.get('anuncio_publicado') == True:
+            user = request.user
+            propriedade_atual = self.get_object()
+            
+            # Só fazemos a contagem se a propriedade ainda NÃO estiver publicada
+            if user.role == 'landlord' and user.plano and not propriedade_atual.anuncio_publicado:
+                total_anuncios = Propriedade.objects.filter(senhorio=user, anuncio_publicado=True).count()
+                
+                if total_anuncios >= user.plano.max_anuncios:
+                    return Response(
+                        {'error': f'Atingiu o limite de anúncios ativos ({user.plano.max_anuncios}) do seu plano {user.plano.nome}. Faça upgrade para publicar mais!'},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+                    
+        return super().partial_update(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        serializer.save(senhorio=self.request.user)

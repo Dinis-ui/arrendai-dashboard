@@ -23,7 +23,9 @@ urlpatterns = [
     
     # ROTA QUE ESTAVA A DAR 404
     path('change-password/', ChangePasswordView.as_view(), name='change-password'),
-    
+    path('subscribe/', UserViewSet.as_view({'post': 'subscribe'}), name='subscribe'),
     # Rotas do Router
     path('', include(router.urls)),
+
+    
 ]

@@ -4,7 +4,7 @@ import {
   Building2, MapPin, ArrowLeft, Home, Banknote, Users, PenSquare,
   ImageIcon, X, CheckCircle2, Megaphone, Euro, FileText,
   Mail, Phone, Briefcase, Star, ChevronLeft, ChevronRight, Plus, Trash2,
-  MessageSquare, AlertTriangle, ShieldAlert
+  MessageSquare, AlertTriangle, ShieldAlert, AlertCircle
 } from 'lucide-react';
 
 const dadosIniciaisPropriedades: any[] = [];
@@ -37,6 +37,13 @@ export default function Propriedades({ onMudarParaAnuncios, onMudarParaMensagens
   const [valorCaucaoOriginal, setValorCaucaoOriginal] = useState('');
   const [valorDeducao, setValorDeducao] = useState('');
   const [motivoDeducao, setMotivoDeducao] = useState('');
+
+  const [toastErro, setToastErro] = useState<{ativo: boolean, mensagem: string}>({ ativo: false, mensagem: '' });
+
+  const mostrarErro = (mensagem: string) => {
+    setToastErro({ ativo: true, mensagem });
+    setTimeout(() => setToastErro({ ativo: false, mensagem: '' }), 5000); // Fica 5 segundos para ele ler bem
+  };
 
   // ==============================================================
   // 1. CARREGAR PROPRIEDADES DA BASE DE DADOS (GET)
@@ -149,7 +156,7 @@ export default function Propriedades({ onMudarParaAnuncios, onMudarParaMensagens
         } else if (response.status === 403) {
           // AQUI ESTÁ A MAGIA DO LIMITE DO PLANO:
           const errorData = await response.json();
-          alert(errorData.error); // Podes usar um Toast de erro se tiveres um criado!
+          mostrarErro(errorData.error); // Podes usar um Toast de erro se tiveres um criado!
           setIsAddModalOpen(false); // Fecha o modal
         } else {
           alert("Não foi possível gravar na base de dados.");
@@ -224,6 +231,11 @@ export default function Propriedades({ onMudarParaAnuncios, onMudarParaMensagens
             setAbrirModalAnuncio(false);
             if (onMudarParaAnuncios) onMudarParaAnuncios();
           }, 2000);
+        } else if (response.status === 403) {
+          // MAGIA: Interceta o limite de anúncios atingido!
+          const errorData = await response.json();
+          alert(errorData.error);
+          setAbrirModalAnuncio(false);
         } else {
           alert("Erro ao publicar o anúncio.");
         }
@@ -232,7 +244,6 @@ export default function Propriedades({ onMudarParaAnuncios, onMudarParaMensagens
       }
     }
   };
-
   // ==============================================================
   // 5. APAGAR PROPRIEDADE
   // ==============================================================
@@ -833,6 +844,19 @@ export default function Propriedades({ onMudarParaAnuncios, onMudarParaMensagens
             <p className="text-xs text-emerald-100 mt-0.5">{toastMessage}</p>
           </div>
           <button onClick={() => setShowSuccessToast(false)} className="ml-4 text-emerald-200 hover:text-white"><X size={18} /></button>
+        </div>
+      )}
+      {/* TOAST DE ERRO DE LIMITES DO PLANO */}
+      {toastErro.ativo && (
+        <div className="fixed bottom-8 right-8 flex items-start gap-4 p-5 w-full max-w-md bg-rose-50 border border-rose-200 rounded-2xl shadow-2xl shadow-rose-900/10 z-[100] animate-in slide-in-from-bottom-8 fade-in duration-300">
+          <AlertCircle className="text-rose-600 shrink-0 mt-0.5" size={24} />
+          <div>
+            <h4 className="text-rose-900 font-bold text-lg mb-1">Ação Bloqueada</h4>
+            <p className="text-rose-700 text-sm font-medium leading-relaxed">{toastErro.mensagem}</p>
+          </div>
+          <button onClick={() => setToastErro({...toastErro, ativo: false})} className="text-rose-400 hover:text-rose-600 ml-auto">
+            <X size={20} />
+          </button>
         </div>
       )}
     </div>

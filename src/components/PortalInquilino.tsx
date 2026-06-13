@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Search, MapPin, Home, FileText, Wallet, Bell, ChevronDown, 
   SlidersHorizontal, Heart, ArrowUpRight, User, MessageSquare, 
-  X, UploadCloud, CheckCircle, Trash2, CreditCard, Smartphone, Lock
+  X, UploadCloud, CheckCircle, Trash2, CreditCard, Smartphone, Lock, LogOut
 } from 'lucide-react';
 
 const menuItems = [
@@ -128,6 +128,9 @@ export default function PortalInquilino() {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+
+  // ESTADO DO MODAL DE LOGOUT
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   
   // PESQUISA E FILTROS
   const [search, setSearch] = useState('');
@@ -159,6 +162,20 @@ export default function PortalInquilino() {
   const [metodoPagamento, setMetodoPagamento] = useState<'mbway' | 'cartao'>('mbway');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
+  // FUNÇÃO DE TERMINAR SESSÃO
+  // ABRE O AVISO BONITO
+  const handleLogoutClick = () => {
+    setIsLogoutModalOpen(true);
+  };
+
+  // EXECUTA O LOGOUT REALMENTE
+  const confirmarLogout = () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    sessionStorage.removeItem('accessToken');
+    sessionStorage.removeItem('refreshToken');
+    navigate('/login');
+  };
   // 1. CARREGAR UTILIZADOR
   useEffect(() => {
     const carregarUtilizador = async () => {
@@ -564,10 +581,11 @@ export default function PortalInquilino() {
             <div className="p-8 max-w-5xl mx-auto animate-in fade-in duration-300">
               <div className="flex flex-col md:flex-row gap-8">
                 
-                {/* Menu Lateral de Definições */}
+               {/* Menu Lateral de Definições */}
                 <div className="w-full md:w-64 flex-shrink-0">
                   <h2 className="text-2xl font-bold text-slate-800 mb-6">Definições</h2>
-                  <nav className="space-y-2">
+                  
+                  <nav className="space-y-2 flex flex-col">
                     <button 
                       onClick={() => setProfileTab('conta')} 
                       className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-semibold text-sm ${
@@ -590,6 +608,17 @@ export default function PortalInquilino() {
                       <Lock size={18} />
                       Segurança
                     </button>
+
+                    {/* NOVO: Botão de Terminar Sessão dentro do Perfil */}
+                    <div className="pt-6 mt-2 border-t border-gray-200">
+                      <button 
+                        onClick={handleLogoutClick}
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm bg-rose-50 text-rose-600 hover:bg-rose-100 shadow-sm border border-rose-100"
+                      >
+                        <LogOut size={18} />
+                        Terminar Sessão
+                      </button>
+                    </div>
                   </nav>
                 </div>
 
@@ -1037,6 +1066,38 @@ export default function PortalInquilino() {
                 )}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+      {/* MODAL DE CONFIRMAÇÃO DE LOGOUT */}
+      {isLogoutModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-8 text-center">
+              <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-5 border-[6px] border-white shadow-sm">
+                <LogOut size={36} className="ml-1" />
+              </div>
+              
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">Terminar Sessão?</h3>
+              <p className="text-slate-500 mb-8 leading-relaxed">
+                Vais sair da tua conta e voltar para a página inicial. Terás de inserir a tua password para voltar a entrar.
+              </p>
+              
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setIsLogoutModalOpen(false)}
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-xl transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={confirmarLogout}
+                  className="flex-1 bg-rose-500 hover:bg-rose-600 text-white font-bold py-3.5 rounded-xl transition-colors shadow-lg shadow-rose-500/20"
+                >
+                  Sim, Sair
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

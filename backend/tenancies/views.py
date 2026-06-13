@@ -12,18 +12,14 @@ class ApplicationViewSet(viewsets.ModelViewSet):
     serializer_class = ApplicationSerializer
     permission_classes = [IsAuthenticated] 
 
-    class ApplicationViewSet(viewsets.ModelViewSet):
-        serializer_class = ApplicationSerializer
-        permission_classes = [IsAuthenticated] 
-
-        def get_queryset(self):
-            user = self.request.user
-            if user.role == 'landlord':
-            # O Senhorio vê as suas propriedades
-             return Application.objects.filter(property__senhorio=user) 
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == 'landlord':
+            # O Senhorio vê as candidaturas das suas propriedades
+            return Application.objects.filter(property__senhorio=user).order_by('-id') 
         
         # O Inquilino vê as suas candidaturas todas (aprovadas, pendentes e rejeitadas)
-            return Application.objects.filter(tenant=user)
+        return Application.objects.filter(tenant=user).order_by('-id')
     
     def perform_create(self, serializer):
         user = self.request.user
