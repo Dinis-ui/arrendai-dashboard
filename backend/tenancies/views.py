@@ -78,13 +78,25 @@ class ApplicationViewSet(viewsets.ModelViewSet):
             is_active=True
         )
 
-        # Cria Chat
-        chat = Chat.objects.create(property=application.property)
-        chat.participants.add(application.tenant, application.property.senhorio) 
+        # --- LÓGICA DO CHAT CORRIGIDA ---
+        # 1. Procura se já existe um chat para esta propriedade com este inquilino e senhorio
+        chat = Chat.objects.filter(
+            property=application.property,
+            participants=application.tenant
+        ).filter(
+            participants=application.property.senhorio
+        ).first()
+
+        # 2. Se não existir, cria um novo
+        if not chat:
+            chat = Chat.objects.create(property=application.property)
+            chat.participants.add(application.tenant, application.property.senhorio) 
+        
+        # 3. Envia a mensagem (agora vai sempre parar à mesma conversa!)
         Message.objects.create(
             chat=chat,
             sender=application.property.senhorio,
-            text=f"Olá! A sua candidatura ao imóvel {application.property.titulo_anuncio} foi aceite."
+            text=f"Olá! A sua candidatura ao imóvel {application.property.titulo_anuncio or application.property.morada} foi aceite."
         )
 
         # Rejeita as outras candidaturas que ficaram pendentes para esta casa
