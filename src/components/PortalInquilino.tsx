@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Search, MapPin, Home, FileText, Wallet, Bell, ChevronDown, 
   SlidersHorizontal, Heart, ArrowUpRight, User, MessageSquare, 
-  Check, X, UploadCloud, CheckCircle, Trash2, CreditCard, Smartphone
+  X, UploadCloud, CheckCircle, Trash2, CreditCard, Smartphone, Lock
 } from 'lucide-react';
 
 const menuItems = [
@@ -116,6 +116,18 @@ export default function PortalInquilino() {
   const [listings, setListings] = useState<any[]>([]); 
   const [candidaturasReais, setCandidaturasReais] = useState<any[]>([]); 
   const [rendasReais, setRendasReais] = useState<any[]>([]);
+
+  // ESTADOS DO PERFIL (Abas Internas)
+  const [profileTab, setProfileTab] = useState('conta'); // 'conta' | 'seguranca'
+  const [editUsername, setEditUsername] = useState('');
+  const [editTelefone, setEditTelefone] = useState('');
+  const [editNif, setEditNif] = useState('');
+  const [editIban, setEditIban] = useState('');
+  
+  // ESTADOS DE PASSWORD
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   
   // PESQUISA E FILTROS
   const [search, setSearch] = useState('');
@@ -160,7 +172,13 @@ export default function PortalInquilino() {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
-          setUser(await res.json());
+          const dados = await res.json();
+          setUser(dados);
+          // Preencher formulário de perfil logo que os dados chegam
+          setEditUsername(dados.username || '');
+          setEditTelefone(dados.telefone || '');
+          setEditNif(dados.nif || '');
+          setEditIban(dados.iban || '');
         } else {
           navigate('/login');
         }
@@ -171,7 +189,81 @@ export default function PortalInquilino() {
     carregarUtilizador();
   }, [navigate]);
 
-  // 2. CARREGAR IMÓVEIS REAIS DO BACKEND
+  // 2A. ATUALIZAR CONTA (NOME, NIF, IBAN, ETC)
+  const guardarConta = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+    
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/users/me/', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          username: editUsername,
+          telefone: editTelefone,
+          nif: editNif,
+          iban: editIban
+        })
+      });
+
+      if (response.ok) {
+        const dadosNovos = await response.json();
+        setUser(dadosNovos); 
+        alert("Dados guardados com sucesso!");
+      } else {
+        const erro = await response.json();
+        alert(`Erro ao guardar: ${JSON.stringify(erro)}`);
+      }
+    } catch (error) {
+      console.error('Erro de rede:', error);
+    }
+  };
+
+  // 2B. ATUALIZAR PASSWORD
+  const atualizarPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (newPassword !== confirmPassword) {
+      alert("A nova password e a confirmação não coincidem!");
+      return;
+    }
+
+    const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+    
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/users/change-password/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          old_password: oldPassword, 
+          new_password: newPassword 
+        })
+      });
+
+      if (response.ok) {
+        alert("Password atualizada com sucesso! Por favor, faz login novamente.");
+        // Limpar os tokens e mandar para o Login
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        sessionStorage.removeItem('accessToken');
+        sessionStorage.removeItem('refreshToken');
+        navigate('/login');
+      } else {
+        const erro = await response.json();
+        alert(`Erro ao alterar password: ${JSON.stringify(erro)}`);
+      }
+    } catch (error) {
+      console.error('Erro de rede:', error);
+    }
+  };
+
+  // 3. CARREGAR IMÓVEIS REAIS DO BACKEND
   useEffect(() => {
     const buscarImoveis = async () => {
       const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
@@ -207,7 +299,7 @@ export default function PortalInquilino() {
     buscarImoveis();
   }, []);
 
-  // 3. CARREGAR CANDIDATURAS REAIS
+  // 4. CARREGAR CANDIDATURAS REAIS
   useEffect(() => {
     if (activeTab === 'Minhas Candidaturas') {
       const carregarAsMinhasCandidaturas = async () => {
@@ -229,7 +321,7 @@ export default function PortalInquilino() {
     }
   }, [activeTab]);
 
-  // 4. CARREGAR RENDAS (CONTRATOS ATIVOS)
+  // 5. CARREGAR RENDAS (CONTRATOS ATIVOS)
   useEffect(() => {
     if (activeTab === 'As Minhas Rendas') {
       const carregarRendas = async () => {
@@ -260,7 +352,6 @@ export default function PortalInquilino() {
     e.preventDefault();
     setIsProcessingPayment(true);
     
-    // Simular processamento bancário (1.5 segundos)
     setTimeout(async () => {
       const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
       try {
@@ -300,6 +391,7 @@ export default function PortalInquilino() {
     }
   };
 
+  // CANDIDATURA (MODAL E ENVIO)
   const handleOpenCandidatura = (imovel: any) => {
     setImovelCandidatura(imovel);
     setMensagemCandidatura('');
@@ -383,7 +475,7 @@ export default function PortalInquilino() {
     return matchSearch && matchDistrito && matchTipo && matchPreco && matchArea;
   });
 
-  const nomeExibicao = user?.username || user?.first_name || user?.email || 'Utilizador';
+  const nomeExibicao = user?.username || 'Utilizador';
 
   return (
     <div className="flex h-screen bg-gray-50 font-sans text-slate-900 relative">
@@ -417,10 +509,13 @@ export default function PortalInquilino() {
           </Link>
         </nav>
 
+        {/* SIDEBAR FOOTER - Abre as Definições do Perfil */}
         <div className="p-4 border-t border-slate-800">
           <div 
-            onClick={() => navigate('/perfil')}
-            className="flex items-center gap-3 px-2 py-2 cursor-pointer hover:bg-slate-800 rounded-lg transition-colors"
+            onClick={() => setActiveTab('Perfil')}
+            className={`flex items-center gap-3 px-2 py-2 cursor-pointer rounded-lg transition-colors ${
+              activeTab === 'Perfil' ? 'bg-slate-800' : 'hover:bg-slate-800'
+            }`}
           >
             <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold uppercase shrink-0">
               {user ? nomeExibicao.charAt(0) : '?'}
@@ -453,13 +548,176 @@ export default function PortalInquilino() {
                 )}
               </button>
             </div>
-            <div className="w-9 h-9 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold text-sm uppercase shrink-0">
+            <div 
+              onClick={() => setActiveTab('Perfil')}
+              className="w-9 h-9 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold text-sm uppercase shrink-0 cursor-pointer hover:ring-2 hover:ring-sky-200 transition-all"
+            >
               {user ? nomeExibicao.charAt(0) : <User size={18} />}
             </div>
           </div>
         </header>
 
         <div className="flex-1 overflow-y-auto bg-slate-50">
+          
+          {/* TAB PERFIL: ESTILO SENHORIO COM MENU LATERAL INTERNO */}
+          {activeTab === 'Perfil' && (
+            <div className="p-8 max-w-5xl mx-auto animate-in fade-in duration-300">
+              <div className="flex flex-col md:flex-row gap-8">
+                
+                {/* Menu Lateral de Definições */}
+                <div className="w-full md:w-64 flex-shrink-0">
+                  <h2 className="text-2xl font-bold text-slate-800 mb-6">Definições</h2>
+                  <nav className="space-y-2">
+                    <button 
+                      onClick={() => setProfileTab('conta')} 
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-semibold text-sm ${
+                        profileTab === 'conta' 
+                          ? 'bg-sky-50 text-sky-700 shadow-sm' 
+                          : 'text-slate-500 hover:bg-white hover:shadow-sm'
+                      }`}
+                    >
+                      <User size={18} />
+                      A Minha Conta
+                    </button>
+                    <button 
+                      onClick={() => setProfileTab('seguranca')} 
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-semibold text-sm ${
+                        profileTab === 'seguranca' 
+                          ? 'bg-sky-50 text-sky-700 shadow-sm' 
+                          : 'text-slate-500 hover:bg-white hover:shadow-sm'
+                      }`}
+                    >
+                      <Lock size={18} />
+                      Segurança
+                    </button>
+                  </nav>
+                </div>
+
+                {/* Área de Conteúdo */}
+                <div className="flex-1">
+                  
+                  {/* ABA: A MINHA CONTA */}
+                  {profileTab === 'conta' && (
+                    <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
+                      <div className="mb-8">
+                        <h3 className="text-xl font-bold text-slate-800">A Minha Conta</h3>
+                        <p className="text-sm text-slate-500 mt-1">Gere a tua informação pessoal e dados financeiros.</p>
+                      </div>
+
+                      <form onSubmit={guardarConta} className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Nome de Utilizador</label>
+                            <input 
+                              type="text" 
+                              value={editUsername} 
+                              onChange={e => setEditUsername(e.target.value)} 
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-sky-500 focus:bg-white transition-colors" 
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Endereço de Email</label>
+                            <input 
+                              type="email" 
+                              value={user?.email || ''} 
+                              disabled 
+                              className="w-full bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-500 cursor-not-allowed" 
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Número de Telemóvel</label>
+                            <input 
+                              type="text" 
+                              value={editTelefone} 
+                              onChange={e => setEditTelefone(e.target.value)} 
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-sky-500 focus:bg-white transition-colors" 
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">NIF</label>
+                            <input 
+                              type="text" 
+                              value={editNif} 
+                              onChange={e => setEditNif(e.target.value)} 
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-sky-500 focus:bg-white transition-colors" 
+                            />
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">IBAN</label>
+                            <input 
+                              type="text" 
+                              value={editIban} 
+                              onChange={e => setEditIban(e.target.value)} 
+                              placeholder="PT50..."
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-sky-500 focus:bg-white transition-colors" 
+                            />
+                          </div>
+                        </div>
+
+                        <div className="pt-6 border-t border-slate-100 flex justify-end">
+                          <button type="submit" className="bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 px-6 rounded-xl transition-colors shadow-sm">
+                            Guardar Alterações
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
+
+                  {/* ABA: SEGURANÇA */}
+                  {profileTab === 'seguranca' && (
+                    <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
+                      <div className="mb-8">
+                        <h3 className="text-xl font-bold text-slate-800">Segurança e Password</h3>
+                        <p className="text-sm text-slate-500 mt-1">Atualiza a tua password para manteres a conta segura.</p>
+                      </div>
+
+                      <form onSubmit={atualizarPassword} className="space-y-5 max-w-md">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Palavra-passe atual</label>
+                          <input 
+                            type="password" 
+                            value={oldPassword} 
+                            onChange={e => setOldPassword(e.target.value)}
+                            required
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-sky-500 focus:bg-white transition-colors" 
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Nova palavra-passe</label>
+                          <input 
+                            type="password" 
+                            value={newPassword} 
+                            onChange={e => setNewPassword(e.target.value)}
+                            required
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-sky-500 focus:bg-white transition-colors" 
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Confirmar nova palavra-passe</label>
+                          <input 
+                            type="password" 
+                            value={confirmPassword} 
+                            onChange={e => setConfirmPassword(e.target.value)}
+                            required
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-sky-500 focus:bg-white transition-colors" 
+                          />
+                        </div>
+
+                        <div className="pt-4">
+                          <button type="submit" className="bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 px-6 rounded-xl transition-colors shadow-sm w-full md:w-auto">
+                            Atualizar Password
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
+
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB PESQUISAR */}
           {activeTab === 'Pesquisar' && (
             <div className="p-8">
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-8">
@@ -514,6 +772,7 @@ export default function PortalInquilino() {
             </div>
           )}
 
+          {/* TAB MINHAS CANDIDATURAS */}
           {activeTab === 'Minhas Candidaturas' && (
             <div className="p-8">
               <h2 className="text-xl font-bold text-slate-800 mb-6">Minhas Candidaturas</h2>
@@ -561,6 +820,7 @@ export default function PortalInquilino() {
             </div>
           )}
 
+          {/* TAB AS MINHAS RENDAS */}
           {activeTab === 'As Minhas Rendas' && (
             <div className="p-8">
               <h2 className="text-xl font-bold text-slate-800 mb-6">As Minhas Rendas</h2>
