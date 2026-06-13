@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Check, Star, X, Smartphone, CreditCard, ShieldCheck } from 'lucide-react';
+import { Check, Star, X, Smartphone, CreditCard, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function PlanosSubscricao() {
   const [user, setUser] = useState<any>(null);
@@ -10,6 +10,13 @@ export default function PlanosSubscricao() {
   const [planoAPagar, setPlanoAPagar] = useState<any>(null);
   const [metodoPagamento, setMetodoPagamento] = useState<'mbway' | 'cartao'>('mbway');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  // Estado do Toast Profissional
+  const [toast, setToast] = useState<{ativo: boolean, mensagem: string, tipo: 'sucesso' | 'erro'}>({ ativo: false, mensagem: '', tipo: 'sucesso' });
+
+  const mostrarToast = (mensagem: string, tipo: 'sucesso' | 'erro') => {
+    setToast({ ativo: true, mensagem, tipo });
+    setTimeout(() => setToast({ ativo: false, mensagem: '', tipo: 'sucesso' }), 4000); // Fica 4 segundos no ecrã
+  };
 
   const carregarDados = async () => {
     const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
@@ -66,7 +73,8 @@ export default function PlanosSubscricao() {
     setTimeout(async () => {
       const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/users/me/subscribe/', {
+        // CORREÇÃO AQUI: Retirámos o "/me" do link!
+        const response = await fetch('http://127.0.0.1:8000/api/users/subscribe/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ plano_id: planoId })
@@ -75,14 +83,16 @@ export default function PlanosSubscricao() {
         if (response.ok) {
           await carregarDados(); // Atualiza o plano atual no ecrã
           setIsPaymentModalOpen(false);
-          alert("Subscrição ativada com sucesso!");
+          mostrarToast("Subscrição ativada com sucesso! O seu plano já está ativo.", "sucesso");
+        } else {
+          mostrarToast("Erro ao processar o pagamento.", "erro");
         }
       } catch (error) {
         alert("Erro no pagamento.");
       } finally {
         setIsProcessingPayment(false);
       }
-    }, 1500); // Simulador de tempo de banco
+    }, 1500);
   };
   // Função de simulação para desenvolvimento
 const simularMudancaPlano = async (planoId: number) => {
@@ -189,6 +199,13 @@ const simularMudancaPlano = async (planoId: number) => {
               </button>
             </form>
           </div>
+        </div>
+      )}
+      {/* TOAST DE NOTIFICAÇÃO PROFISSIONAL */}
+      {toast.ativo && (
+        <div className={`fixed bottom-8 right-8 flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl shadow-slate-900/10 z-[100] animate-in slide-in-from-bottom-8 fade-in duration-300 border ${toast.tipo === 'sucesso' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-rose-50 border-rose-200 text-rose-800'}`}>
+          {toast.tipo === 'sucesso' ? <CheckCircle2 size={24} className="text-emerald-500" /> : <AlertCircle size={24} className="text-rose-500" />}
+          <p className="font-semibold">{toast.mensagem}</p>
         </div>
       )}
     </div>

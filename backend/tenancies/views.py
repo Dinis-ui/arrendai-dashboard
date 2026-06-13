@@ -19,12 +19,21 @@ class ApplicationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+
         if user.role == 'landlord' or user.role == 'senhorio':
             # O Senhorio vê as candidaturas das suas propriedades
             return Application.objects.filter(property__senhorio=user).order_by('-created_at') 
         
         # O Inquilino vê as suas próprias candidaturas
         return Application.objects.filter(tenant=user).order_by('-created_at')
+
+        if user.role == 'landlord':
+            # O Senhorio vê as candidaturas das suas propriedades
+            return Application.objects.filter(property__senhorio=user).order_by('-id') 
+        
+        # O Inquilino vê as suas candidaturas todas (aprovadas, pendentes e rejeitadas)
+        return Application.objects.filter(tenant=user).order_by('-id')
+
     
     def perform_create(self, serializer):
         user = self.request.user
