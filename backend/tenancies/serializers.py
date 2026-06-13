@@ -31,12 +31,24 @@ class DocumentSerializer(serializers.ModelSerializer):
         read_only_fields = ['tenant']
 
 class MessageSerializer(serializers.ModelSerializer):
+    # Enviar o nome de quem mandou a mensagem
+    sender_name = serializers.CharField(source='sender.username', read_only=True)
+    
     class Meta:
         model = Message
-        fields = '__all__'
+        fields = ['id', 'chat', 'sender', 'sender_name', 'text', 'timestamp']
+        read_only_fields = ['sender']
 
 class ChatSerializer(serializers.ModelSerializer):
     messages = MessageSerializer(many=True, read_only=True)
+    # Enviar o título da casa
+    property_title = serializers.CharField(source='property.titulo_anuncio', read_only=True)
+    # Enviar os detalhes dos participantes
+    participants_info = serializers.SerializerMethodField()
+
     class Meta:
         model = Chat
-        fields = '__all__'
+        fields = ['id', 'property', 'property_title', 'participants', 'participants_info', 'messages', 'created_at']
+
+    def get_participants_info(self, obj):
+        return [{"id": user.id, "username": user.username} for user in obj.participants.all()]

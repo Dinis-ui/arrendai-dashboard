@@ -3,6 +3,7 @@ import {
   Check, X, Mail, Phone, CheckCircle2, FileText,
   ShieldCheck, UserCheck, AlertCircle, Clock
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function Candidaturas() {
   const [candidaturas, setCandidaturas] = useState<any[]>([]);
@@ -39,6 +40,7 @@ export default function Candidaturas() {
 
             return {
               id: cand.id,
+              propertyId: cand.property,
               nome: nome,
               iniciais: nome.charAt(0).toUpperCase(),
               imovel: cand.property_title || cand.property?.titulo_anuncio || 'Imóvel Indisponível',
@@ -174,7 +176,9 @@ export default function Candidaturas() {
                     )}
                   </h3>
                   <p className="text-sm text-slate-500 font-medium mt-0.5">
-                    {cand.imovel} • {cand.localizacao} • <span className="text-slate-400">{cand.tempo}</span>
+                    <p className="text-sm text-slate-500 font-medium mt-0.5">
+                    <Link onClick={(e) => e.stopPropagation()} to={`/imovel/${cand.propertyId}`} className="hover:text-sky-600 hover:underline text-slate-700">{cand.imovel}</Link> • {cand.localizacao} • <span className="text-slate-400">{cand.tempo}</span>
+                  </p>
                   </p>
                 </div>
               </div>
@@ -223,7 +227,9 @@ export default function Candidaturas() {
                 <div>
                   <h2 className="text-2xl font-bold text-slate-800">{candidatoSelecionado.nome}</h2>
                   <p className="text-sm text-slate-500 flex items-center gap-1.5 mt-1">
-                    Interessado em: <strong className="text-slate-700">{candidatoSelecionado.imovel}</strong>
+                    <p className="text-sm text-slate-500 flex items-center gap-1.5 mt-1">
+                    Interessado em: <Link to={`/imovel/${candidatoSelecionado.propertyId}`} className="text-slate-700 font-bold hover:text-sky-600 hover:underline">{candidatoSelecionado.imovel}</Link>
+                  </p>
                   </p>
                 </div>
               </div>

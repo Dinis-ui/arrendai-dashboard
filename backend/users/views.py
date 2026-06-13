@@ -4,12 +4,18 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth import get_user_model, update_session_auth_hash
+from rest_framework.decorators import action
 
 # Importações dos modelos e serializers
-from .models import Propriedade
-from .serializers import RegisterSerializer, UserSerializer, PropriedadeSerializer
+from .models import Propriedade, PlanoSubscricao
+from .serializers import RegisterSerializer, UserSerializer, PropriedadeSerializer, PlanoSubscricaoSerializer
 
 User = get_user_model()
+
+class PlanoSubscricaoViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = PlanoSubscricao.objects.all().order_by('preco')
+    serializer_class = PlanoSubscricaoSerializer
+    permission_classes = [IsAuthenticated]
 
 # 1. Gestão Geral de Utilizadores
 class UserViewSet(viewsets.ModelViewSet):
@@ -21,6 +27,18 @@ class UserViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return RegisterSerializer
         return UserSerializer
+    
+    @action(detail=False, methods=['post'])
+    def subscribe(self, request):
+        user = request.user
+        plano_id = request.data.get('plano_id')
+        try:
+            plano = PlanoSubscricao.objects.get(id=plano_id)
+            user.plano = plano
+            user.save()
+            return Response({'message': f'Bem-vindo ao plano {plano.nome}!'}, status=status.HTTP_200_OK)
+        except PlanoSubscricao.DoesNotExist:
+            return Response({'error': 'Plano não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
 
 # 2. Específico para o Registo
@@ -111,3 +129,21 @@ class PropriedadeViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(senhorio=self.request.user)
+
+        def create(self, request, *args, **kwargs):
+            user = request.user
+        
+        # Só aplicamos limites se o utilizador for senhorio e tiver um plano associado
+            if user.role == 'landlord' and user.plano:
+            # Conta quantas casas este senhorio já tem
+             total_casas = Propriedade.objects.filter(senhorio=user).count()
+            
+            # Compara com o limite do plano
+             if total_casas >= user.plano.max_propriedades:
+                    return Response(
+                        {'error': f'Atingiu o limite do seu plano ({user.plano.nome}). Atualize a sua subscrição para adicionar mais do que {user.plano.max_propriedades} propriedades.'},
+                        status=status.HTTP_403_FORBIDDEN
+                )
+                
+        # Se estiver tudo ok (ou for o admin), deixa criar a propriedade normalmente
+            return super().create(request, *args, **kwargs)

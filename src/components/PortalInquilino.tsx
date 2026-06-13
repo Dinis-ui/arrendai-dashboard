@@ -791,7 +791,9 @@ export default function PortalInquilino() {
                         <Home size={28} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-slate-800 truncate">{cand.property_title || 'Imóvel Indisponível'}</p>
+                        <Link to={`/imovel/${cand.property}`} className="font-bold text-slate-800 truncate hover:text-sky-600 hover:underline transition-colors block">
+                          {cand.property_title || 'Imóvel Indisponível'}
+                        </Link>
                         <p className="text-sm text-slate-500 flex items-center gap-1 mt-0.5">
                           <MapPin size={12} />{cand.property_location || 'Localização não definida'}
                         </p>
@@ -835,15 +837,28 @@ export default function PortalInquilino() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {rendasReais.map((renda) => (
                     <div key={renda.id} className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm flex flex-col relative overflow-hidden">
-                      <div className={`absolute top-0 right-0 w-24 h-24 rounded-bl-full -z-10 ${renda.payment_status === 'pago' ? 'bg-emerald-50' : 'bg-slate-50'}`}></div>
+                      {/* Cor de fundo muda se o contrato estiver inativo */}
+                      <div className={`absolute top-0 right-0 w-24 h-24 rounded-bl-full -z-10 ${!renda.is_active ? 'bg-rose-50/50' : renda.payment_status === 'pago' ? 'bg-emerald-50' : 'bg-slate-50'}`}></div>
+                      
                       <div className="flex items-center gap-4 mb-6">
-                        <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-inner ${renda.payment_status === 'pago' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-600'}`}>
+                        <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-inner ${!renda.is_active ? 'bg-rose-100 text-rose-600' : renda.payment_status === 'pago' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-600'}`}>
                           <Wallet size={26} />
                         </div>
                         <div>
-                          <h3 className="font-bold text-slate-800 text-lg">Contrato Ativo</h3>
+                          {/* Título dinâmico */}
+                          <h3 className="font-bold text-slate-800 text-lg">
+                            {renda.is_active ? 'Contrato Ativo' : 'Contrato Encerrado'}
+                          </h3>
                           <p className="text-sm text-slate-500 font-medium flex items-center gap-1.5 mt-0.5">
-                            <CheckCircle size={14} className={renda.payment_status === 'pago' ? "text-emerald-500" : "text-slate-400"} /> Válido até {renda.end_date}
+                            {renda.is_active ? (
+                              <>
+                                <CheckCircle size={14} className={renda.payment_status === 'pago' ? "text-emerald-500" : "text-slate-400"} /> Válido até {renda.end_date}
+                              </>
+                            ) : (
+                              <>
+                                <span className="w-2 h-2 rounded-full bg-rose-500 inline-block animate-pulse"></span> Terminado pelo Senhorio
+                              </>
+                            )}
                           </p>
                         </div>
                       </div>
@@ -854,7 +869,12 @@ export default function PortalInquilino() {
                           <span className="text-2xl font-black text-slate-800">{Number(renda.monthly_rent).toLocaleString('pt-PT')}€</span>
                         </div>
                         
-                        {renda.payment_status === 'pago' ? (
+                        {/* LÓGICA DE BOTÕES MODIFICADA AQUI: */}
+                        {!renda.is_active ? (
+                          <span className="text-rose-700 font-bold bg-rose-50 border border-rose-200 px-4 py-2 rounded-xl text-xs uppercase tracking-wider">
+                            Arrendamento Concluído
+                          </span>
+                        ) : renda.payment_status === 'pago' ? (
                           <div className="flex flex-col items-end">
                             <span className="text-emerald-600 font-bold flex items-center gap-1.5 bg-emerald-50 px-4 py-2 rounded-xl">
                               <CheckCircle size={18} /> Mês Pago

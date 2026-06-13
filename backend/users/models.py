@@ -2,6 +2,14 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.conf import settings
 
+class PlanoSubscricao(models.Model):
+    nome = models.CharField(max_length=50)  # Ex: "Free", "Premium", "Business"
+    max_propriedades = models.IntegerField(default=1)
+    max_anuncios = models.IntegerField(default=1)
+    preco = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
+    
+    def __str__(self):
+        return f"Plano {self.nome} ({self.preco}€)"
 # --- TABELA 1: OS UTILIZADORES ---
 class User(AbstractUser):
     ROLE_CHOICES = (
@@ -20,6 +28,8 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+    
+    plano = models.ForeignKey(PlanoSubscricao, on_delete=models.SET_NULL, null=True, blank=True)
 
 # --- TABELA 2: AS PROPRIEDADES ---
 class Propriedade(models.Model):

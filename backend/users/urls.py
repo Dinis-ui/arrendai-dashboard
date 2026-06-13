@@ -6,14 +6,15 @@ from .views import (
     utilizador_atual, 
     PasswordResetView, 
     ChangePasswordView, 
-    PropriedadeViewSet
+    PropriedadeViewSet,
+    PlanoSubscricaoViewSet
 ) 
 
 router = DefaultRouter()
 # Usar 'users' como prefixo evita conflitos com rotas vazias
 router.register(r'propriedades', PropriedadeViewSet, basename='propriedade')
 router.register(r'users', UserViewSet, basename='user') 
-
+router.register(r'planos', PlanoSubscricaoViewSet, basename='planos')
 urlpatterns = [
     # Rotas específicas
     path('register/', UserRegistrationView.as_view(), name='register'),

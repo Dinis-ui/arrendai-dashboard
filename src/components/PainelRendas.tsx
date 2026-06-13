@@ -1,56 +1,81 @@
 import { useState, useEffect } from 'react';
-import { Wallet, AlertCircle, ArrowDownCircle, CheckCircle, Download, Plus, Receipt, X } from 'lucide-react';
+import { Wallet, AlertCircle, CheckCircle, Download, Plus, Receipt, X, ChevronDown } from 'lucide-react';
+import { Link } from 'react-router-dom';
+
+const categoriasDespesa = [
+  'Condomínio',
+  'Água',
+  'Eletricidade',
+  'Gás',
+  'Internet / Telecomunicações',
+  'Reparação - Canalização',
+  'Reparação - Eletricidade',
+  'Reparação - Eletrodomésticos',
+  'Obras e Manutenção Geral',
+  'Impostos (IMI / AIMI)',
+  'Seguro Multirriscos',
+  'Limpeza',
+  'Outro'
+];
 
 export default function PainelRendas() {
   const [activeTab, setActiveTab] = useState<'rendas' | 'despesas'>('rendas');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // 1. DESPESAS: Guardadas no LocalStorage para não se perderem ao fazer F5
+
+  // 1. DESPESAS (Guardadas no LocalStorage)
   const [despesas, setDespesas] = useState<any[]>(() => {
     const guardadas = localStorage.getItem('minhasDespesas');
-    return guardadas ? JSON.parse(guardadas) : [
-      { id: 1, propriedade: 'Exemplo: Av. Boavista', descricao: 'Condomínio', data: '02/05/2026', valor: 65 },
-    ];
+    return guardadas ? JSON.parse(guardadas) : []; // <-- Alterado aqui para arrancar vazio!
   });
 
   const [novaDespesa, setNovaDespesa] = useState({ propriedade: '', descricao: '', valor: '', data: '' });
 
-  // 2. RENDAS: Agora começam vazias e vêm do Django!
+  // 2. RENDAS E PROPRIEDADES (Vêm do Django)
   const [rendas, setRendas] = useState<any[]>([]);
+  const [minhasCasas, setMinhasCasas] = useState<any[]>([]); // <-- NOVO ESTADO: Guarda as tuas casas
 
   useEffect(() => {
-    const carregarContratos = async () => {
+    const carregarDados = async () => {
       const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
       if (!token) return;
 
       try {
-        const res = await fetch('http://127.0.0.1:8000/api/tenancies/tenancies/', {
+        // A) Buscar os contratos (Rendas)
+        const resRendas = await fetch('http://127.0.0.1:8000/api/tenancies/tenancies/', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        if (res.ok) {
-          const dados = await res.json();
-          
-          // Lemos do localStorage para saber quais contratos já marcaste como "Pago"
-          const pagamentosGuardados = JSON.parse(localStorage.getItem('estadosPagamento') || '{}');
-
+        if (resRendas.ok) {
+          const dados = await resRendas.json();
           const rendasFormatadas = dados.map((ct: any) => ({
             id: ct.id,
+            propertyId: ct.property,
             inquilino: ct.tenant_name || `Inquilino #${ct.tenant}`,
             propriedade: ct.property_title || `Propriedade #${ct.property}`,
-            vencimento: ct.start_date, // A data em que o contrato começou
+            vencimento: ct.start_date,
             valor: Number(ct.monthly_rent),
-            estado: pagamentosGuardados[ct.id] || 'pendente' // Pendente por defeito
+            estado: ct.payment_status || 'pendente'
           }));
-
           setRendas(rendasFormatadas);
         }
+
+        // B) Buscar as propriedades do Senhorio para o Dropdown das Despesas
+        const resCasas = await fetch('http://127.0.0.1:8000/api/users/propriedades/', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (resCasas.ok) {
+          const casas = await resCasas.json();
+          setMinhasCasas(casas);
+        }
+
       } catch (error) {
-        console.error("Erro ao carregar contratos:", error);
+        console.error("Erro ao carregar dados:", error);
       }
     };
 
-    carregarContratos();
+    carregarDados();
   }, []);
 
   // MATEMÁTICA FINANCEIRA
@@ -60,14 +85,19 @@ export default function PainelRendas() {
   const saldoLiquido = totalRecebido - totalDespesas;
 
   // AÇÕES
-  const marcarComoPago = (id: number) => {
-    const novasRendas = rendas.map(renda => renda.id === id ? { ...renda, estado: 'pago' } : renda);
-    setRendas(novasRendas);
-
-    // Guardar a memória que esta renda foi paga
-    const pagamentosGuardados = JSON.parse(localStorage.getItem('estadosPagamento') || '{}');
-    pagamentosGuardados[id] = 'pago';
-    localStorage.setItem('estadosPagamento', JSON.stringify(pagamentosGuardados));
+  const marcarComoPago = async (id: number) => {
+    const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/tenancies/tenancies/${id}/pay/`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        setRendas(rendas.map(renda => renda.id === id ? { ...renda, estado: 'pago' } : renda));
+      }
+    } catch (e) {
+      console.error("Erro ao marcar como pago", e);
+    }
   };
 
   const adicionarDespesa = (e: React.FormEvent) => {
@@ -79,9 +109,9 @@ export default function PainelRendas() {
       data: novaDespesa.data,
       valor: parseFloat(novaDespesa.valor)
     };
-    const novaLista = [...despesas, nova];
+    const novaLista = [nova, ...despesas]; // Adiciona ao início da lista
     setDespesas(novaLista);
-    localStorage.setItem('minhasDespesas', JSON.stringify(novaLista)); // Salva no browser
+    localStorage.setItem('minhasDespesas', JSON.stringify(novaLista)); 
     
     setIsModalOpen(false);
     setNovaDespesa({ propriedade: '', descricao: '', valor: '', data: '' });
@@ -100,7 +130,7 @@ export default function PainelRendas() {
   };
 
   return (
-    <div className="animate-in fade-in duration-500">
+    <div className="animate-in fade-in duration-500 pb-10">
       <div className="mb-8 flex justify-between items-end">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Dashboard Financeiro</h1>
@@ -163,7 +193,9 @@ export default function PainelRendas() {
                   <tr key={r.id} className="border-t border-gray-100 hover:bg-slate-50/50">
                     <td className="px-6 py-4">
                       <p className="font-bold text-slate-800">{r.inquilino}</p>
-                      <p className="text-xs text-slate-400">{r.propriedade}</p>
+                      <Link to={`/imovel/${r.propertyId}`} className="text-xs text-slate-400 hover:text-sky-600 hover:underline block mt-0.5">
+                        {r.propriedade}
+                      </Link>
                     </td>
                     <td className="px-6 py-4 font-bold text-slate-700">{r.valor.toLocaleString('pt-PT')} €</td>
                     <td className="px-6 py-4">
@@ -198,7 +230,7 @@ export default function PainelRendas() {
               ) : (
                 despesas.map(d => (
                   <tr key={d.id} className="border-t border-gray-100 hover:bg-slate-50/50">
-                    <td className="px-6 py-4 text-sm text-slate-500">{d.data}</td>
+                    <td className="px-6 py-4 text-sm text-slate-500">{new Date(d.data).toLocaleDateString('pt-PT')}</td>
                     <td className="px-6 py-4">
                       <p className="font-bold text-slate-800">{d.descricao}</p>
                       <p className="text-xs text-slate-400">{d.propriedade}</p>
@@ -221,14 +253,47 @@ export default function PainelRendas() {
             </div>
             
             <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Propriedade</label>
-                <input required placeholder="Ex: Av. Boavista" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white" onChange={e => setNovaDespesa({...novaDespesa, propriedade: e.target.value})} />
+              {/* SELECT DA PROPRIEDADE */}
+              <div className="relative">
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Propriedade Afetada</label>
+                <div className="relative">
+                  <select 
+                    required 
+                    value={novaDespesa.propriedade}
+                    onChange={e => setNovaDespesa({...novaDespesa, propriedade: e.target.value})}
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white appearance-none cursor-pointer text-slate-700"
+                  >
+                    <option value="" disabled>Selecione a casa...</option>
+                    {minhasCasas.length === 0 && <option value="" disabled>A carregar propriedades...</option>}
+                    {minhasCasas.map((casa) => (
+                      <option key={casa.id} value={casa.titulo_anuncio || casa.morada}>
+                        {casa.titulo_anuncio || casa.morada}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Descrição</label>
-                <input required placeholder="Ex: Reparação de janelas" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white" onChange={e => setNovaDespesa({...novaDespesa, descricao: e.target.value})} />
+
+              {/* SELECT DA DESCRIÇÃO (CATEGORIA) */}
+              <div className="relative">
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Categoria da Despesa</label>
+                <div className="relative">
+                  <select 
+                    required 
+                    value={novaDespesa.descricao}
+                    onChange={e => setNovaDespesa({...novaDespesa, descricao: e.target.value})}
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white appearance-none cursor-pointer text-slate-700"
+                  >
+                    <option value="" disabled>Selecione o tipo de gasto...</option>
+                    {categoriasDespesa.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                </div>
               </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Data</label>
@@ -236,13 +301,13 @@ export default function PainelRendas() {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Valor (€)</label>
-                  <input required type="number" step="0.01" placeholder="0.00" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white" onChange={e => setNovaDespesa({...novaDespesa, valor: e.target.value})} />
+                  <input required type="number" step="0.01" min="0" placeholder="0.00" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white" onChange={e => setNovaDespesa({...novaDespesa, valor: e.target.value})} />
                 </div>
               </div>
             </div>
 
             <button type="submit" className="w-full bg-sky-600 hover:bg-sky-700 text-white py-3.5 rounded-xl font-bold mt-8 shadow-md transition-all hover:-translate-y-0.5">
-              Guardar Despesa
+              Registar Nova Despesa
             </button>
           </form>
         </div>
