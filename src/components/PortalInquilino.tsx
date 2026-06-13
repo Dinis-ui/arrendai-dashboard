@@ -492,7 +492,7 @@ export default function PortalInquilino() {
     return matchSearch && matchDistrito && matchTipo && matchPreco && matchArea;
   });
 
-  const nomeExibicao = user?.username || 'Utilizador';
+  const nomeExibicao = (user?.first_name ? `${user.first_name} ${user.last_name}`.trim() : user?.nome_completo) || user?.username || 'Utilizador';
 
   return (
     <div className="flex h-screen bg-gray-50 font-sans text-slate-900 relative">

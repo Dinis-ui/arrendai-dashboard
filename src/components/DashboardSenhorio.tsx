@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Building2, Megaphone, Users, Wallet, MessageSquare, Search, Bell, Check } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Building2, Megaphone, Users, Wallet, MessageSquare, Search, Bell, ShieldCheck, LogOut } from 'lucide-react';
 
 // IMPORTAÇÃO DOS COMPONENTES
 import Anuncios from './Anuncios';
@@ -9,7 +10,6 @@ import PainelCandidaturas from './PainelCandidaturas';
 import PainelMensagens from './PainelMensagens';
 import PerfilSenhorio from './PerfilSenhorio';
 import PlanosSubscricao from './PlanosSubscricao';
-import { ShieldCheck } from 'lucide-react'; // Traz também este ícone
 
 const menuItems = [
   { name: 'Propriedades', icon: Building2 },
@@ -21,8 +21,12 @@ const menuItems = [
 ];
 
 export default function DashboardSenhorio() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('Anúncios');
   const [user, setUser] = useState<any>(null); 
+  
+  // ESTADO DO MODAL DE LOGOUT
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   
   useEffect(() => {
     const carregarDados = async () => {
@@ -51,6 +55,30 @@ export default function DashboardSenhorio() {
 
   const naoLidas = notificacoes.filter(n => !n.lida).length;
 
+  // Lógica inteligente para mostrar o Nome Completo ou o Username
+  const nomeExibicao = (user?.first_name ? `${user.first_name} ${user.last_name}`.trim() : user?.nome_completo) || user?.username || 'Utilizador';
+// NOVO: Tradutor do ID do Plano para Nome
+  const traduzirPlano = (plano: any) => {
+    if (!plano) return '';
+    if (plano.nome) return plano.nome; // Caso o backend já envie o nome
+    if (plano === 1 || plano === '1') return 'Básico';
+    if (plano === 2 || plano === '2') return 'PRO';
+    if (plano === 3 || plano === '3') return 'Premium';
+    return `Plano ${plano}`; // Prevenção para outros números
+  };
+  // FUNÇÕES DE LOGOUT
+  const handleLogoutClick = () => {
+    setIsLogoutModalOpen(true);
+  };
+
+  const confirmarLogout = () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    sessionStorage.removeItem('accessToken');
+    sessionStorage.removeItem('refreshToken');
+    navigate('/login');
+  };
+
   if (activeTab === 'Perfil') {
     return <PerfilSenhorio onBack={() => setActiveTab('Anúncios')} />;
   }
@@ -61,7 +89,7 @@ export default function DashboardSenhorio() {
       case 'Propriedades': return (
         <Propriedades 
           onMudarParaAnuncios={() => setActiveTab('Anúncios')} 
-          onMudarParaMensagens={() => setActiveTab('Mensagens')} // <-- AQUI ESTÁ A LIGAÇÃO NOVA!
+          onMudarParaMensagens={() => setActiveTab('Mensagens')}
         />
       );
       case 'Candidaturas': return <PainelCandidaturas />;
@@ -73,10 +101,10 @@ export default function DashboardSenhorio() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50 font-sans text-slate-900">
+    <div className="flex h-screen bg-gray-50 font-sans text-slate-900 relative">
       
       {/* SIDEBAR */}
-      <aside className="w-64 bg-slate-900 text-white flex flex-col shrink-0">
+      <aside className="w-64 bg-slate-900 text-white flex flex-col shrink-0 z-10">
         <div className="p-6 flex items-center gap-3">
           <div className="w-8 h-8 bg-sky-500 rounded-lg flex items-center justify-center font-bold text-xl shadow-lg shadow-sky-500/20">A</div>
           <span className="text-xl font-bold tracking-tight">ArrendAI</span>
@@ -105,15 +133,24 @@ export default function DashboardSenhorio() {
             onClick={() => setActiveTab('Perfil')}
             className="flex items-center gap-3 px-2 py-2 cursor-pointer hover:bg-slate-800 rounded-lg transition-colors"
           >
-            <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold uppercase">
-              {user ? user?.username.charAt(0) : '?'}
+            <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold uppercase shrink-0">
+              {user ? nomeExibicao.charAt(0) : '?'}
             </div>
-            <div>
-              <p className="text-sm font-medium text-white truncate w-32">
-                {user ? user?.username : 'A carregar...'}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">
+                {user ? nomeExibicao : 'A carregar...'}
               </p>
-              <p className="text-xs text-slate-400">
-                {user?.role === 'landlord' ? 'Senhorio' : 'Inquilino'}
+              
+             {/* SECÇÃO DO CARGO + PLANO */}
+              <p className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
+                <span>{user?.role === 'landlord' ? 'Senhorio' : 'Inquilino'}</span>
+                
+                {/* Se for senhorio e tiver plano, mostra a etiqueta traduzida */}
+                {user?.role === 'landlord' && user?.plano && (
+                  <span className="bg-sky-500/20 text-sky-400 px-1.5 py-0.5 rounded text-[9px] uppercase font-bold tracking-wider">
+                    {traduzirPlano(user.plano)}
+                  </span>
+                )}
               </p>
             </div>
           </div>
@@ -121,7 +158,7 @@ export default function DashboardSenhorio() {
       </aside>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-hidden z-0">
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 flex-shrink-0 relative z-20">
           <div className="relative w-96">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
@@ -138,6 +175,40 @@ export default function DashboardSenhorio() {
           {renderContent()}
         </div>
       </main>
+
+      {/* MODAL DE CONFIRMAÇÃO DE LOGOUT */}
+      {isLogoutModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-8 text-center">
+              <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-5 border-[6px] border-white shadow-sm">
+                <LogOut size={36} className="ml-1" />
+              </div>
+              
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">Terminar Sessão?</h3>
+              <p className="text-slate-500 mb-8 leading-relaxed">
+                Vai sair da sua conta de Senhorio e voltar para a página inicial. Terá de inserir a sua password para voltar a entrar.
+              </p>
+              
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setIsLogoutModalOpen(false)}
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-xl transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={confirmarLogout}
+                  className="flex-1 bg-rose-500 hover:bg-rose-600 text-white font-bold py-3.5 rounded-xl transition-colors shadow-lg shadow-rose-500/20"
+                >
+                  Sim, Sair
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
