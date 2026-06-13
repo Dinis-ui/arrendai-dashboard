@@ -12,14 +12,19 @@ class ApplicationViewSet(viewsets.ModelViewSet):
     serializer_class = ApplicationSerializer
     permission_classes = [IsAuthenticated] 
 
-    def get_queryset(self):
-        user = self.request.user
-        if user.role == 'landlord':
-            return Application.objects.filter(property__senhorio=user) 
-        
-        # A MAGIA ACONTECE AQUI: O Inquilino só vê as candidaturas que NÃO foram rejeitadas!
-        return Application.objects.filter(tenant=user).exclude(status='rejected')
+    class ApplicationViewSet(viewsets.ModelViewSet):
+        serializer_class = ApplicationSerializer
+        permission_classes = [IsAuthenticated] 
 
+        def get_queryset(self):
+            user = self.request.user
+            if user.role == 'landlord':
+            # O Senhorio vê as suas propriedades
+             return Application.objects.filter(property__senhorio=user) 
+        
+        # O Inquilino vê as suas candidaturas todas (aprovadas, pendentes e rejeitadas)
+            return Application.objects.filter(tenant=user)
+    
     def perform_create(self, serializer):
         user = self.request.user
         propriedade = serializer.validated_data.get('property')
@@ -92,6 +97,20 @@ class TenancyViewSet(viewsets.ModelViewSet):
         tenancy.payment_status = 'pago'
         tenancy.save()
         return Response({'message': 'Pagamento efetuado com sucesso!', 'status': 'pago'}, status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['post'])
+    def close(self, request, pk=None):
+        tenancy = self.get_object()
+        
+        if not tenancy.is_active:
+            return Response({'error': 'O contrato já se encontra encerrado.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        # Desliga o contrato e define a data de hoje como o fim oficial
+        tenancy.is_active = False
+        tenancy.end_date = timezone.now().date()
+        tenancy.save()
+        
+        return Response({'message': 'Contrato encerrado e propriedade libertada com sucesso.'}, status=status.HTTP_200_OK)
 
 class DocumentViewSet(viewsets.ModelViewSet):
     serializer_class = DocumentSerializer

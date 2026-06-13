@@ -1,63 +1,22 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Building2, MapPin, ArrowLeft, Home, Banknote, Users, PenSquare,
   ImageIcon, X, CheckCircle2, Megaphone, Euro, FileText,
-  Mail, Phone, Briefcase, Star, Calendar, ChevronLeft, ChevronRight, Plus, Trash2
+  Mail, Phone, Briefcase, Star, ChevronLeft, ChevronRight, Plus, Trash2,
+  MessageSquare, AlertTriangle, ShieldAlert
 } from 'lucide-react';
 
-const dadosIniciaisPropriedades = [
-  { 
-    id: 1, 
-    morada: 'Rua Garrett 12, Lisboa', 
-    area: 85, 
-    preco: 1200, 
-    estado: 'Alugado', 
-    cor: 'bg-green-50 text-green-700',
-    inquilino: 'Maria Ferreira',
-    contratoInicio: '01 Jan 2024',
-    contractoFim: '31 Dez 2025',
-    imagem: 'https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=1200',
-    galeria: [
-      'https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=1200',
-      'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=1200',
-      'https://images.pexels.com/photos/2724749/pexels-photo-2724749.jpeg?auto=compress&cs=tinysrgb&w=1200',
-      'https://images.pexels.com/photos/1428348/pexels-photo-1428348.jpeg?auto=compress&cs=tinysrgb&w=1200'
-    ],
-    perfilInquilino: {
-      nome: 'Maria Ferreira',
-      idade: 28,
-      profissao: 'Engenheira de Software',
-      email: 'maria.ferreira@email.com',
-      telefone: '+351 912 345 678',
-      membroDesde: 'Outubro 2023',
-      score: 4.9,
-      bio: 'Inquilina tranquila, organizada e com histórico perfeito de pagamentos de rendas nas propriedades anteriores.'
-    }
-  },
-  { 
-    id: 2, 
-    morada: 'Av. da Boavista 450, Porto', 
-    area: 110, 
-    preco: 1550, 
-    estado: 'Vazio', 
-    cor: 'bg-amber-50 text-amber-700',
-    inquilino: null,
-    contratoInicio: '-',
-    contratoFim: '-',
-    imagem: 'https://images.pexels.com/photos/1428348/pexels-photo-1428348.jpeg?auto=compress&cs=tinysrgb&w=1200',
-    galeria: [
-      'https://images.pexels.com/photos/1428348/pexels-photo-1428348.jpeg?auto=compress&cs=tinysrgb&w=1200',
-      'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=1200'
-    ],
-    perfilInquilino: null
-  }
-];
+const dadosIniciaisPropriedades: any[] = [];
 
 interface PropriedadesProps {
   onMudarParaAnuncios?: () => void;
+  onMudarParaMensagens?: () => void; 
 }
 
-export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps) {
+export default function Propriedades({ onMudarParaAnuncios, onMudarParaMensagens }: PropriedadesProps) {
+  const navigate = useNavigate();
+  
   const [propriedades, setPropriedades] = useState<any[]>(dadosIniciaisPropriedades);
   const [propriedadeSelecionadaId, setPropriedadeSelecionadaId] = useState<number | null>(null);
   
@@ -71,6 +30,13 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
   const [toastMessage, setToastMessage] = useState(''); 
   const [sucessoAnuncio, setSucessoAnuncio] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Estados para Encerrar Contrato
+  const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
+  const [caucaoAcao, setCaucaoAcao] = useState<'total' | 'parcial' | 'retencao'>('total');
+  const [valorCaucaoOriginal, setValorCaucaoOriginal] = useState('');
+  const [valorDeducao, setValorDeducao] = useState('');
+  const [motivoDeducao, setMotivoDeducao] = useState('');
 
   // ==============================================================
   // 1. CARREGAR PROPRIEDADES DA BASE DE DADOS (GET)
@@ -97,12 +63,12 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
               let cor = 'bg-slate-50 text-slate-700';
               let estadoExibicao = prop.estado;
 
-              // SE O ESTADO DE APROVAÇÃO FOR PENDENTE, REALÇA ISSO NO ECRÃ
-              if (prop.status_aprovacao === 'pendente') {
+              if (prop.inquilino_atual) {
+                estadoExibicao = 'Alugado';
+                cor = 'bg-green-50 text-green-700';
+              } else if (prop.status_aprovacao === 'pendente') {
                 cor = 'bg-amber-50 text-amber-700';
                 estadoExibicao = 'Em Revisão (Admin)';
-              } else if (prop.estado === 'Alugado') {
-                cor = 'bg-green-50 text-green-700';
               } else if (prop.estado === 'Vazio') {
                 cor = 'bg-sky-50 text-sky-700';
               } else if (prop.estado === 'Em Obras') {
@@ -111,10 +77,16 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
 
               return {
                 ...prop,
-                preco: Number(prop.valor_estimado || 0), // Converte para o teu padrão local
-                estado: estadoExibicao, // Mostra "Em Revisão" se o admin não aceitou
+                preco: Number(prop.valor_estimado || 0),
+                estado: estadoExibicao,
                 cor: cor,
-                // Vai buscar a foto verdadeira ao Django, ou usa a provisória se não houver
+                inquilino: prop.inquilino_atual || null, 
+                
+                contratoInicio: prop.contrato_inicio || '-',
+                contratoFim: prop.contrato_fim || '-',
+                perfilInquilino: prop.perfil_inquilino || null,
+                contratoId: prop.contrato_id || null, // Guarda o ID para enviar à API
+                
                 imagem: prop.foto_principal || 'https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=1200',
                 galeria: prop.foto_principal ? [prop.foto_principal] : ['https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=1200']
               };
@@ -130,22 +102,17 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
     buscarPropriedadesDaBD();
   }, []);
 
-
-
   // ==============================================================
-  // 2. CRIAR NOVA PROPRIEDADE NA BASE DE DADOS (POST)
+  // 2. CRIAR NOVA PROPRIEDADE
   // ==============================================================
   const handleAddProperty = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
-    // O FormData vai capturar TODOS os inputs do formulário automaticamente (incluindo o ficheiro da imagem)
     const form = e.currentTarget;
     const formData = new FormData(form);
     const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
     
-    // O Django espera o nome 'valor_estimado', mas o nosso input chama-se 'preco', por isso copiamos o valor
     formData.append('valor_estimado', formData.get('preco') as string);
-    formData.delete('preco'); // Limpamos o nome antigo
+    formData.delete('preco');
 
     const novoEstado = formData.get('estado') as string;
     let novaCor = 'bg-slate-50 text-slate-700';
@@ -157,17 +124,12 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
       try {
         const response = await fetch('http://127.0.0.1:8000/api/users/propriedades/', {
           method: 'POST',
-          headers: {
-            // ATENÇÃO: Retirámos o 'Content-Type': 'application/json'!!! 
-            // Quando enviamos ficheiros, o browser tem de tratar do Content-Type sozinho.
-            'Authorization': `Bearer ${token}`
-          },
-          body: formData // Enviamos o FormData cru, não usamos JSON.stringify()
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
         });
 
         if (response.ok) {
           const propriedadeCriadaNaBD = await response.json();
-          
           const novaPropriedade = { 
             ...propriedadeCriadaNaBD,
             preco: Number(propriedadeCriadaNaBD.valor_estimado),
@@ -175,7 +137,6 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
             inquilino: novoEstado === 'Alugado' ? 'Novo Inquilino' : null,
             contratoInicio: '-',
             contratoFim: '-',
-            // Se o Django guardou a foto, usamos a URL dele, senão usamos a foto genérica
             imagem: propriedadeCriadaNaBD.foto_principal || 'https://images.pexels.com/photos/439391/pexels-photo-439391.jpeg?auto=compress&cs=tinysrgb&w=1200',
             galeria: []
           };
@@ -185,8 +146,12 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
           setToastMessage('Propriedade enviada para aprovação!');
           setShowSuccessToast(true);
           setTimeout(() => setShowSuccessToast(false), 3000);
+        } else if (response.status === 403) {
+          // AQUI ESTÁ A MAGIA DO LIMITE DO PLANO:
+          const errorData = await response.json();
+          alert(errorData.error); // Podes usar um Toast de erro se tiveres um criado!
+          setIsAddModalOpen(false); // Fecha o modal
         } else {
-          console.error("Erro do servidor:", await response.text());
           alert("Não foi possível gravar na base de dados.");
         }
       } catch (error) {
@@ -194,7 +159,10 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
       }
     }
   };
-  // LÓGICA DO BOTÃO "GUARDAR ALTERAÇÕES"
+
+  // ==============================================================
+  // 3. EDITAR PROPRIEDADE
+  // ==============================================================
   const handleSaveEdit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -212,12 +180,7 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
     const propriedadesAtualizadas = propriedades.map((p) => {
       if (p.id === propriedadeSelecionadaId) {
         return {
-          ...p,
-          morada: novaMorada,
-          area: novaArea,
-          preco: novoPreco,
-          estado: novoEstado,
-          cor: novaCor,
+          ...p, morada: novaMorada, area: novaArea, preco: novoPreco, estado: novoEstado, cor: novaCor,
           inquilino: novoEstado === 'Alugado' ? p.inquilino || 'Novo Inquilino' : null
         };
       }
@@ -231,10 +194,11 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
     setTimeout(() => setShowSuccessToast(false), 3000);
   };
   
-  // Criar Anúncio e enviar para o LocalStorage
+  // ==============================================================
+  // 4. CRIAR ANÚNCIO
+  // ==============================================================
   const handleCriarAnuncio = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
     const formData = new FormData(e.currentTarget);
     const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
     
@@ -243,34 +207,21 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
 
     if (propriedadeSelecionadaId && token) {
       try {
-        // Fazemos um PATCH porque só queremos atualizar estes campos, mantendo o resto da propriedade intacta
         const response = await fetch(`http://127.0.0.1:8000/api/users/propriedades/${propriedadeSelecionadaId}/`, {
           method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            anuncio_publicado: true,
-            titulo_anuncio: titulo,
-            preco_anuncio: preco
-          })
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ anuncio_publicado: true, titulo_anuncio: titulo, preco_anuncio: preco })
         });
 
         if (response.ok) {
-          setSucessoAnuncio(true); // Mostra aquela animação verde bonita que já tens
-          
-          // Atualiza a lista visualmente no ecrã para o senhorio
+          setSucessoAnuncio(true); 
           setPropriedades(propriedades.map(p => 
-            p.id === propriedadeSelecionadaId 
-              ? { ...p, anuncio_publicado: true, titulo_anuncio: titulo, preco_anuncio: preco } 
-              : p
+            p.id === propriedadeSelecionadaId ? { ...p, anuncio_publicado: true, titulo_anuncio: titulo, preco_anuncio: preco } : p
           ));
 
           setTimeout(() => {
             setSucessoAnuncio(false);
             setAbrirModalAnuncio(false);
-            // Se tens uma aba 'Anúncios', muda para lá
             if (onMudarParaAnuncios) onMudarParaAnuncios();
           }, 2000);
         } else {
@@ -281,19 +232,19 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
       }
     }
   };
-// Apagar propriedade da Base de Dados
+
+  // ==============================================================
+  // 5. APAGAR PROPRIEDADE
+  // ==============================================================
   const apagarPropriedade = async (id: number, morada: string) => {
     const confirmacao = window.confirm(`Tens a certeza que queres apagar o imóvel em "${morada}"? Esta ação não pode ser desfeita.`);
     if (!confirmacao) return;
 
     const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
-    
     try {
       const response = await fetch(`http://127.0.0.1:8000/api/users/propriedades/${id}/`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
 
       if (response.ok || response.status === 204) {
@@ -310,16 +261,68 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
     }
   };
 
-  const nextImage = (galeria: string[]) => {
-    setCurrentImageIndex((prev) => (prev === galeria.length - 1 ? 0 : prev + 1));
-  };
-  const prevImage = (galeria: string[]) => {
-    setCurrentImageIndex((prev) => (prev === 0 ? galeria.length - 1 : prev - 1));
-  };
+  const nextImage = (galeria: string[]) => setCurrentImageIndex((prev) => (prev === galeria.length - 1 ? 0 : prev + 1));
+  const prevImage = (galeria: string[]) => setCurrentImageIndex((prev) => (prev === 0 ? galeria.length - 1 : prev - 1));
   
+  // ==============================================================
+  // VISTA DE DETALHES DE UMA PROPRIEDADE
+  // ==============================================================
   if (propriedadeSelecionadaId !== null) {
     const prop = propriedades.find(p => p.id === propriedadeSelecionadaId);
     if (!prop) return null;
+
+    // ENCERRAR CONTRATO LOGIC
+    const handleEncerrarContrato = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!propriedadeSelecionadaId || !prop.contratoId) return;
+
+      const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+      
+      try {
+        const response = await fetch(`http://127.0.0.1:8000/api/tenancies/tenancies/${prop.contratoId}/close/`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+          const despesasGuardadas = JSON.parse(localStorage.getItem('minhasDespesas') || '[]');
+          const novosMovimentos = [];
+          const dataHoje = new Date().toISOString().split('T')[0];
+
+          const valorTotal = Number(valorCaucaoOriginal);
+          const deducao = Number(valorDeducao);
+
+          if (caucaoAcao === 'total') {
+            novosMovimentos.push({ id: Date.now(), propriedade: prop.morada, descricao: 'Devolução Total de Caução', data: dataHoje, valor: valorTotal });
+          } else if (caucaoAcao === 'parcial') {
+            const valorDevolvido = valorTotal - deducao;
+            novosMovimentos.push({ id: Date.now(), propriedade: prop.morada, descricao: 'Devolução Parcial de Caução', data: dataHoje, valor: valorDevolvido });
+            novosMovimentos.push({ id: Date.now() + 1, propriedade: prop.morada, descricao: `Custo Reparação: ${motivoDeducao}`, data: dataHoje, valor: deducao });
+          } else {
+            if (deducao > 0) {
+               novosMovimentos.push({ id: Date.now(), propriedade: prop.morada, descricao: `Custo Obras (Caução Retida): ${motivoDeducao}`, data: dataHoje, valor: deducao });
+            }
+          }
+
+          localStorage.setItem('minhasDespesas', JSON.stringify([...novosMovimentos, ...despesasGuardadas]));
+
+          setPropriedades(propriedades.map(p => 
+            p.id === propriedadeSelecionadaId ? { ...p, estado: 'Vazio', cor: 'bg-sky-50 text-sky-700', inquilino: null, perfilInquilino: null, contratoInicio: '-', contratoFim: '-' } : p
+          ));
+
+          setIsCloseModalOpen(false);
+          setToastMessage('Contrato encerrado e movimentos registados nas Despesas!');
+          setShowSuccessToast(true);
+          setTimeout(() => setShowSuccessToast(false), 4000);
+          
+          setValorCaucaoOriginal(''); setValorDeducao(''); setMotivoDeducao('');
+        } else {
+          alert("Não foi possível encerrar o contrato (possivelmente já está inativo).");
+        }
+      } catch (error) {
+        alert("Erro ao comunicar com o servidor.");
+      }
+    };
 
     return (
       <div className="animate-in fade-in slide-in-from-right-4 duration-500 pb-10 relative">
@@ -432,6 +435,14 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Fim do Contrato</label>
                     <p className="font-bold text-slate-800 bg-slate-50 px-4 py-2.5 rounded-xl border border-slate-100">{prop.contratoFim}</p>
                   </div>
+                  
+                  {/* NOVO: BOTÃO DE ENCERRAR CONTRATO */}
+                  <button 
+                    onClick={() => setIsCloseModalOpen(true)}
+                    className="w-full mt-4 flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 py-3 rounded-xl font-bold transition-colors border border-red-200"
+                  >
+                    <ShieldAlert size={18} /> Encerrar Contrato
+                  </button>
                 </div>
               </div>
             ) : (
@@ -529,6 +540,7 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
                   </div>
                 </div>
               </div>
+              
               <div className="pt-14 pb-6 px-6 border-b border-slate-100">
                 <div className="flex justify-between items-start mb-2">
                   <div>
@@ -541,7 +553,18 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
                   </div>
                 </div>
                 <p className="text-sm text-slate-600 mt-4 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">"{prop.perfilInquilino.bio}"</p>
+                
+                <button 
+                  onClick={() => {
+                    setIsTenantProfileOpen(false);
+                    if (onMudarParaMensagens) onMudarParaMensagens(); 
+                  }}
+                  className="w-full mt-5 flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-700 text-white py-3 rounded-xl font-bold transition-all shadow-md shadow-sky-600/20"
+                >
+                  <MessageSquare size={18} /> Enviar Mensagem
+                </button>
               </div>
+              
               <div className="p-6 space-y-4 bg-slate-50/50">
                 <div className="flex items-center gap-4 text-sm text-slate-600">
                   <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 shadow-sm"><Briefcase size={16} /></div>
@@ -612,6 +635,70 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
             </div>
            </div>
         )}
+
+        {/* MODAL 6: ENCERRAR CONTRATO & CAUÇÃO */}
+        {isCloseModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in zoom-in-95">
+            <form onSubmit={handleEncerrarContrato} className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl">
+              <div className="p-6 border-b border-slate-100 bg-red-50/50 flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center"><AlertTriangle size={20} /></div>
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-lg">Encerrar Arrendamento</h3>
+                    <p className="text-xs text-slate-500">Ação irreversível.</p>
+                  </div>
+                </div>
+                <button type="button" onClick={() => setIsCloseModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-2 rounded-full hover:bg-slate-100 transition-colors"><X size={20} /></button>
+              </div>
+
+              <div className="p-6 space-y-6">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Valor da Caução Original (€)</label>
+                  <input type="number" required value={valorCaucaoOriginal} onChange={e => setValorCaucaoOriginal(e.target.value)} placeholder="Ex: 2500" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-sky-500 font-bold text-slate-700" />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-3">Ação sobre a Caução</label>
+                  <div className="space-y-2">
+                    <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${caucaoAcao === 'total' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-white border-slate-200'}`}>
+                      <input type="radio" name="caucao" value="total" checked={caucaoAcao === 'total'} onChange={() => setCaucaoAcao('total')} className="w-4 h-4 text-emerald-600" />
+                      <span className="font-bold text-sm">Devolução Total (Imóvel sem danos)</span>
+                    </label>
+                    <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${caucaoAcao === 'parcial' ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-white border-slate-200'}`}>
+                      <input type="radio" name="caucao" value="parcial" checked={caucaoAcao === 'parcial'} onChange={() => setCaucaoAcao('parcial')} className="w-4 h-4 text-amber-600" />
+                      <span className="font-bold text-sm">Devolução Parcial (Dedução de custos)</span>
+                    </label>
+                    <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${caucaoAcao === 'retencao' ? 'bg-red-50 border-red-200 text-red-800' : 'bg-white border-slate-200'}`}>
+                      <input type="radio" name="caucao" value="retencao" checked={caucaoAcao === 'retencao'} onChange={() => setCaucaoAcao('retencao')} className="w-4 h-4 text-red-600" />
+                      <span className="font-bold text-sm">Retenção Total (Incumprimento grave)</span>
+                    </label>
+                  </div>
+                </div>
+
+                {caucaoAcao !== 'total' && (
+                  <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-2">
+                    <div className="col-span-2">
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Motivo da Dedução / Obras</label>
+                      <input type="text" required value={motivoDeducao} onChange={e => setMotivoDeducao(e.target.value)} placeholder="Ex: Pintura e limpeza profunda" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 text-sm" />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Custo a Deduzir (€)</label>
+                      <input type="number" required value={valorDeducao} onChange={e => setValorDeducao(e.target.value)} placeholder="0.00" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-bold text-amber-700" />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50/50">
+                <button type="button" onClick={() => setIsCloseModalOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
+                <button type="submit" className="px-6 py-2.5 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors shadow-md shadow-red-600/20">
+                  Confirmar Encerramento
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
       </div>
     );
   }
@@ -646,7 +733,6 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
                 <img src={prop.imagem} alt={prop.morada} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
               </div>
               
-              {/* ZONA SUPERIOR DIREITA: TAG DE ESTADO E BOTAO APAGAR */}
               <div className="flex items-center gap-2">
                 <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${prop.cor}`}>
                   {prop.estado}
@@ -654,7 +740,7 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
                 
                 <button
                   onClick={(e) => {
-                    e.stopPropagation(); // Impede que abra os detalhes da propriedade
+                    e.stopPropagation(); 
                     apagarPropriedade(prop.id, prop.morada);
                   }}
                   className="bg-red-50 hover:bg-red-500 text-red-500 hover:text-white p-1.5 rounded-lg transition-colors"
@@ -680,7 +766,6 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
       {/* MODAL 5: ADICIONAR NOVA PROPRIEDADE */}
       {isAddModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-          {/* Adicionámos encType="multipart/form-data" para permitir envio de ficheiros */}
           <form onSubmit={handleAddProperty} encType="multipart/form-data" className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
               <h3 className="font-bold text-lg text-slate-800">Nova Propriedade</h3>
@@ -690,7 +775,6 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
             </div>
             
             <div className="p-6 space-y-5">
-              {/* NOVO CAMPO: Fotografia */}
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Fotografia Principal</label>
                 <input type="file" name="foto_principal" accept="image/*" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 focus:border-sky-500 outline-none file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100" />
@@ -702,7 +786,6 @@ export default function Propriedades({ onMudarParaAnuncios }: PropriedadesProps)
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                {/* NOVO CAMPO: Tipo de Casa */}
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Tipo</label>
                   <select name="tipo_casa" defaultValue="apartamento" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 focus:border-sky-500 outline-none cursor-pointer">

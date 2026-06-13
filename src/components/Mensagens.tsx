@@ -1,93 +1,108 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Search, Send, Image as ImageIcon, MoreVertical, 
-  MessageSquare, FileText, Wallet, Bell, Check, User 
+  Search, Send, MessageSquare, FileText, Wallet, Bell, User 
 } from 'lucide-react';
-
-// Dados de simulação base (caso não haja nada no LocalStorage)
-const conversasBase = [
-  {
-    id: 1,
-    senhorio: 'Dinis G.',
-    inquilino: 'Maria Ferreira', 
-    imovel: 'Apartamento T2 com Varanda e Vista Rio',
-    avatar: 'DG',
-    unread: true,
-    lastMessage: 'Ola! Sim, podemos agendar visita para quinta-feira as 18h.',
-    time: '10:30',
-    history: [
-      { senderRole: 'tenant', text: 'Ola Dinis, estou interessada. Ainda da para visitar?', time: '09:15' },
-      { senderRole: 'landlord', text: 'Ola! Sim, podemos agendar visita para quinta-feira as 18h. Da-te jeito?', time: '10:30' }
-    ]
-  }
-];
 
 export default function Mensagens() {
   const navigate = useNavigate();
   
-  // ESTADOS DO UTILIZADOR
   const [user, setUser] = useState<any>(null);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [notificacoes, setNotificacoes] = useState([
-    { id: 1, titulo: 'Candidatura Aprovada!', desc: 'O senhorio aceitou a tua candidatura.', tempo: 'Há 10 min', lida: false }
-  ]);
-  const naoLidas = notificacoes.filter(n => !n.lida).length;
-
-  // LER DO LOCAL STORAGE
-  const carregarConversasIniciais = () => {
-    const guardadas = localStorage.getItem('minhasConversas');
-    return guardadas ? JSON.parse(guardadas) : conversasBase;
-  };
-
-  const [conversas, setConversas] = useState(carregarConversasIniciais());
-  const [activeChat, setActiveChat] = useState(carregarConversasIniciais()[0]);
+  const [conversas, setConversas] = useState<any[]>([]);
+  const [activeChatId, setActiveChatId] = useState<number | null>(null);
   const [inputText, setInputText] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    // Atualiza a lista caso o senhorio tenha respondido noutro separador
-    const interval = setInterval(() => {
-      const atualizadas = carregarConversasIniciais();
-      setConversas(atualizadas);
-      if (activeChat) {
-        const chatAtualizado = atualizadas.find((c: any) => c.id === activeChat.id);
-        if (chatAtualizado) setActiveChat(chatAtualizado);
-      }
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [activeChat]);
-
+  // 1. CARREGAR UTILIZADOR
   useEffect(() => {
     const carregarUtilizador = async () => {
       const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
       if (!token) { navigate('/login'); return; }
       try {
-        const res = await fetch('http://127.0.0.1:8000/api/users/me/', { headers: { 'Authorization': `Bearer ${token}` } });
+        const res = await fetch('http://127.0.0.1:8000/api/users/me/', { 
+          headers: { 'Authorization': `Bearer ${token}` } 
+        });
         if (res.ok) setUser(await res.json());
       } catch (e) { console.error(e); }
     };
     carregarUtilizador();
   }, [navigate]);
 
-  const sendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputText.trim()) return;
-
-    // INQUILINO ENVIA -> senderRole: 'tenant'
-    const newMessage = { senderRole: 'tenant', text: inputText, time: 'Agora' };
-    
-    const updatedChat = { ...activeChat, lastMessage: inputText, time: 'Agora', history: [...activeChat.history, newMessage] };
-    const novasConversas = conversas.map((c: any) => c.id === activeChat.id ? updatedChat : c);
-    
-    setActiveChat(updatedChat);
-    setConversas(novasConversas);
-    localStorage.setItem('minhasConversas', JSON.stringify(novasConversas));
-    setInputText('');
+  // 2. BUSCAR CHATS REAIS NA API
+  const carregarChats = async () => {
+    if (!user) return;
+    const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/tenancies/chats/', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const dados = await res.json();
+        
+        const formatados = dados.map((c: any) => {
+          // Descobrir quem é a "outra pessoa" no chat
+          const outraPessoa = c.participants_info?.find((p: any) => p.id !== user.id);
+          const nomeOutraPessoa = outraPessoa?.username || 'Senhorio';
+          
+          return {
+            ...c,
+            outroNome: nomeOutraPessoa,
+            avatar: nomeOutraPessoa.charAt(0).toUpperCase(),
+            lastMessage: c.messages.length > 0 ? c.messages[c.messages.length - 1].text : 'Sem mensagens',
+            time: c.messages.length > 0 ? new Date(c.messages[c.messages.length - 1].timestamp).toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'}) : ''
+          };
+        });
+        
+        setConversas(formatados);
+      }
+    } catch (e) {
+      console.error("Erro a carregar chats:", e);
+    }
   };
+
+  // POLLING: Atualiza os chats a cada 2 segundos
+  useEffect(() => {
+    carregarChats();
+    const interval = setInterval(carregarChats, 2000);
+    return () => clearInterval(interval);
+  }, [user]);
+
+  // Scroll automático para a última mensagem
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [conversas, activeChatId]);
+
+  // 3. ENVIAR MENSAGEM PARA O DJANGO
+  const sendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputText.trim() || !activeChatId) return;
+
+    const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+    const textoEnviado = inputText;
+    setInputText(''); // Limpa logo o input para ser rápido
+
+    try {
+      await fetch('http://127.0.0.1:8000/api/tenancies/messages/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          chat: activeChatId,
+          text: textoEnviado
+        })
+      });
+      carregarChats(); // Atualiza a lista imediatamente
+    } catch (error) {
+      console.error("Erro a enviar mensagem:", error);
+    }
+  };
+
+  const activeChat = conversas.find(c => c.id === activeChatId);
 
   return (
     <div className="flex h-screen bg-gray-50 font-sans text-slate-900 overflow-hidden">
-      
       {/* SIDEBAR DO INQUILINO */}
       <aside className="w-64 bg-slate-900 text-white flex flex-col shrink-0 z-20">
         <div className="p-6 flex items-center gap-3">
@@ -96,7 +111,6 @@ export default function Mensagens() {
         </div>
         
         <nav className="flex-1 px-4 mt-4 space-y-1">
-          {/* MENU COMPLETO RESTAURADO AQUI */}
           <button onClick={() => navigate('/portalinquilino')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
             <Search size={20} /> <span className="font-medium text-sm">Pesquisar</span>
           </button>
@@ -148,26 +162,21 @@ export default function Mensagens() {
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                {conversas.length === 0 && <p className="text-center text-sm text-slate-400 mt-4">Sem mensagens.</p>}
                 {conversas.map((chat: any) => (
-                  <div key={chat.id} onClick={() => {
-                      setActiveChat(chat);
-                      const lidas = conversas.map((c: any) => c.id === chat.id ? { ...c, unread: false } : c);
-                      setConversas(lidas);
-                      localStorage.setItem('minhasConversas', JSON.stringify(lidas));
-                    }}
-                    className={`p-3 rounded-xl cursor-pointer transition-colors border ${activeChat?.id === chat.id ? 'bg-sky-50 border-sky-100' : 'border-transparent hover:bg-slate-50'}`}
+                  <div key={chat.id} onClick={() => setActiveChatId(chat.id)}
+                    className={`p-3 rounded-xl cursor-pointer transition-colors border ${activeChatId === chat.id ? 'bg-sky-50 border-sky-100' : 'border-transparent hover:bg-slate-50'}`}
                   >
                     <div className="flex items-center gap-3">
                       <div className="relative shrink-0">
                         <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-600 text-sm">{chat.avatar}</div>
-                        {chat.unread && <div className="absolute top-0 right-0 w-2.5 h-2.5 bg-sky-500 rounded-full border-2 border-white"></div>}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-baseline mb-0.5">
-                          <p className="font-bold text-sm text-slate-900 truncate">{chat.senhorio}</p>
+                          <p className="font-bold text-sm text-slate-900 truncate">{chat.outroNome}</p>
                           <span className="text-[10px] text-slate-400">{chat.time}</span>
                         </div>
-                        <p className={`text-xs truncate ${chat.unread ? 'font-medium text-slate-800' : 'text-slate-500'}`}>{chat.lastMessage}</p>
+                        <p className="text-xs truncate text-slate-500">{chat.lastMessage}</p>
                       </div>
                     </div>
                   </div>
@@ -183,31 +192,37 @@ export default function Mensagens() {
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center font-bold text-sm">{activeChat.avatar}</div>
                       <div>
-                        <span className="font-bold text-slate-800 block leading-tight">{activeChat.senhorio}</span>
-                        <span className="text-xs text-slate-500 font-medium">{activeChat.imovel}</span>
+                        <span className="font-bold text-slate-800 block leading-tight">{activeChat.outroNome}</span>
+                        <span className="text-xs text-slate-500 font-medium">{activeChat.property_title}</span>
                       </div>
                     </div>
                   </div>
                   
                   <div className="flex-1 p-6 overflow-y-auto flex flex-col space-y-4">
-                    {activeChat.history.map((msg: any, index: number) => (
-                      <div key={index} className={`flex ${msg.senderRole === 'tenant' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`p-3 max-w-[75%] text-sm shadow-sm relative ${
-                          msg.senderRole === 'tenant' 
-                            ? 'bg-sky-600 text-white rounded-2xl rounded-tr-none' 
-                            : 'bg-white border border-gray-100 text-slate-700 rounded-2xl rounded-tl-none'
-                        }`}>
-                          <p className="leading-relaxed">{msg.text}</p>
-                          <p className={`text-[9px] mt-1 text-right opacity-70 ${msg.senderRole === 'tenant' ? 'text-white' : 'text-slate-500'}`}>{msg.time}</p>
+                    {activeChat.messages.map((msg: any) => {
+                      const isMe = msg.sender === user?.id; // Lógica para saber se sou eu
+                      return (
+                        <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`p-3 max-w-[75%] text-sm shadow-sm relative ${
+                            isMe 
+                              ? 'bg-sky-600 text-white rounded-2xl rounded-tr-none' 
+                              : 'bg-white border border-gray-100 text-slate-700 rounded-2xl rounded-tl-none'
+                          }`}>
+                            <p className="leading-relaxed">{msg.text}</p>
+                            <p className={`text-[9px] mt-1 text-right opacity-70 ${isMe ? 'text-white' : 'text-slate-500'}`}>
+                              {new Date(msg.timestamp).toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'})}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
+                    <div ref={messagesEndRef} />
                   </div>
                   
                   <div className="p-4 border-t border-gray-100 bg-white shrink-0">
                     <form onSubmit={sendMessage} className="flex gap-3 items-center">
                       <input type="text" value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder="Escreva uma mensagem..." className="flex-1 bg-slate-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none" />
-                      <button type="submit" disabled={!inputText.trim()} className="bg-sky-600 disabled:bg-slate-300 w-11 h-11 rounded-xl text-white flex items-center justify-center">
+                      <button type="submit" disabled={!inputText.trim()} className="bg-sky-600 disabled:bg-slate-300 w-11 h-11 rounded-xl text-white flex items-center justify-center transition-colors">
                         <Send size={18} className={inputText.trim() ? "translate-x-0.5" : ""} />
                       </button>
                     </form>

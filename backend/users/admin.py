@@ -1,7 +1,8 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User, Propriedade
+from .models import User, Propriedade, PlanoSubscricao
 
+admin.site.register(PlanoSubscricao)
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
     # Adiciona os campos personalizados do utilizador no painel de Admin

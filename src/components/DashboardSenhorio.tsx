@@ -8,6 +8,8 @@ import PainelRendas from './PainelRendas';
 import PainelCandidaturas from './PainelCandidaturas';
 import PainelMensagens from './PainelMensagens';
 import PerfilSenhorio from './PerfilSenhorio';
+import PlanosSubscricao from './PlanosSubscricao';
+import { ShieldCheck } from 'lucide-react'; // Traz também este ícone
 
 const menuItems = [
   { name: 'Propriedades', icon: Building2 },
@@ -15,6 +17,7 @@ const menuItems = [
   { name: 'Candidaturas', icon: Users },
   { name: 'Rendas', icon: Wallet },
   { name: 'Mensagens', icon: MessageSquare },
+  { name: 'Meu Plano', icon: ShieldCheck },
 ];
 
 export default function DashboardSenhorio() {
@@ -55,11 +58,16 @@ export default function DashboardSenhorio() {
   const renderContent = () => {
     switch (activeTab) {
       case 'Anúncios': return <Anuncios />;
-      // AQUI ESTÁ A MAGIA: Passamos uma função para a Propriedade usar!
-      case 'Propriedades': return <Propriedades onMudarParaAnuncios={() => setActiveTab('Anúncios')} />;
+      case 'Propriedades': return (
+        <Propriedades 
+          onMudarParaAnuncios={() => setActiveTab('Anúncios')} 
+          onMudarParaMensagens={() => setActiveTab('Mensagens')} // <-- AQUI ESTÁ A LIGAÇÃO NOVA!
+        />
+      );
       case 'Candidaturas': return <PainelCandidaturas />;
       case 'Rendas': return <PainelRendas />;
       case 'Mensagens': return <PainelMensagens />;
+      case 'Meu Plano': return <PlanosSubscricao />;
       default: return <Anuncios />;
     }
   };
