@@ -10,6 +10,7 @@ class PlanoSubscricao(models.Model):
     
     def __str__(self):
         return f"Plano {self.nome} ({self.preco}€)"
+
 # --- TABELA 1: OS UTILIZADORES ---
 class User(AbstractUser):
     ROLE_CHOICES = (
@@ -21,8 +22,8 @@ class User(AbstractUser):
     nome_completo = models.CharField(max_length=255, blank=True, null=True)
     nif = models.CharField(max_length=9, blank=True, null=True, unique=True)
     
-    # Novos campos para o perfil do Senhorio
-    telefone = models.CharField(max_length=20, blank=True, null=True) # <-- AQUI ESTÁ O NOVO CAMPO
+    # Novos campos para o perfil do Senhorio e Inquilino
+    telefone = models.CharField(max_length=20, blank=True, null=True)
     iban = models.CharField(max_length=34, blank=True, null=True)
     morada_fiscal = models.TextField(blank=True, null=True)
 
@@ -68,3 +69,18 @@ class Propriedade(models.Model):
     
     descricao = models.TextField(blank=True, null=True, default="Fantástico imóvel com excelentes áreas e muita luz natural. Localizado numa zona tranquila e com ótimos acessos.")
     comodidades = models.CharField(max_length=255, blank=True, null=True, default="Cozinha Equipada, Excelente Exposição Solar, Zona Tranquila")
+
+
+# --- TABELA 3: AS NOTIFICAÇÕES (NOVO) ---
+class Notificacao(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notificacoes')
+    titulo = models.CharField(max_length=255)
+    mensagem = models.TextField()
+    lida = models.BooleanField(default=False)
+    criada_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-criada_em']
+
+    def __str__(self):
+        return f"Notificação para {self.user.username}: {self.titulo}"

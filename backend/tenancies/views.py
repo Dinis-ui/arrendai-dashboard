@@ -4,9 +4,14 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from datetime import timedelta
+from rest_framework.exceptions import ValidationError
+
+# IMPORTAÇÕES LOCAIS
 from .models import Application, Tenancy, Document, Chat, Message
 from .serializers import ApplicationSerializer, TenancySerializer, DocumentSerializer, ChatSerializer, MessageSerializer
-from rest_framework.exceptions import ValidationError
+
+# IMPORTAÇÃO DA NOTIFICAÇÃO DO OUTRO APP
+from users.models import Notificacao
 
 class ApplicationViewSet(viewsets.ModelViewSet):
     serializer_class = ApplicationSerializer
@@ -14,12 +19,21 @@ class ApplicationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+
+        if user.role == 'landlord' or user.role == 'senhorio':
+            # O Senhorio vê as candidaturas das suas propriedades
+            return Application.objects.filter(property__senhorio=user).order_by('-created_at') 
+        
+        # O Inquilino vê as suas próprias candidaturas
+        return Application.objects.filter(tenant=user).order_by('-created_at')
+
         if user.role == 'landlord':
             # O Senhorio vê as candidaturas das suas propriedades
             return Application.objects.filter(property__senhorio=user).order_by('-id') 
         
         # O Inquilino vê as suas candidaturas todas (aprovadas, pendentes e rejeitadas)
         return Application.objects.filter(tenant=user).order_by('-id')
+
     
     def perform_create(self, serializer):
         user = self.request.user
@@ -35,7 +49,15 @@ class ApplicationViewSet(viewsets.ModelViewSet):
         if candidatura_existente:
             raise ValidationError({"erro": "Já tens uma candidatura ativa ou em análise para este imóvel."})
 
-        serializer.save(tenant=user)
+        # Salva a candidatura
+        application = serializer.save(tenant=user)
+
+        # 🔔 DISPARA NOTIFICAÇÃO PARA O SENHORIO
+        Notificacao.objects.create(
+            user=propriedade.senhorio,
+            titulo="Nova Candidatura Recebida!",
+            mensagem=f"O inquilino {user.username} acabou de se candidatar ao teu imóvel: {propriedade.titulo_anuncio}."
+        )
 
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
@@ -77,7 +99,19 @@ class ApplicationViewSet(viewsets.ModelViewSet):
             text=f"Olá! A sua candidatura ao imóvel {application.property.titulo_anuncio or application.property.morada} foi aceite."
         )
 
-        Application.objects.filter(property=application.property, status='pending').exclude(id=application.id).update(status='rejected')
+        # Rejeita as outras candidaturas que ficaram pendentes para esta casa
+        Application.objects.filter(
+            property=application.property, 
+            status='pending'
+        ).exclude(id=application.id).update(status='rejected')
+
+        # 🔔 DISPARA NOTIFICAÇÃO PARA O INQUILINO
+        Notificacao.objects.create(
+            user=application.tenant,
+            titulo="Candidatura Aprovada! 🎉",
+            mensagem=f"Parabéns! O senhorio aceitou a tua candidatura para: {application.property.titulo_anuncio}."
+        )
+
         return Response({'message': 'Aprovada!'}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'])
@@ -85,6 +119,14 @@ class ApplicationViewSet(viewsets.ModelViewSet):
         application = self.get_object()
         application.status = 'rejected'
         application.save()
+
+        # 🔔 DISPARA NOTIFICAÇÃO PARA O INQUILINO
+        Notificacao.objects.create(
+            user=application.tenant,
+            titulo="Atualização da Candidatura",
+            mensagem=f"A tua candidatura para {application.property.titulo_anuncio} não avançou. Não desanimes e continua a procurar!"
+        )
+
         return Response({'message': 'Rejeitada.'})
 
 class TenancyViewSet(viewsets.ModelViewSet):
@@ -93,16 +135,24 @@ class TenancyViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         user = self.request.user
-        if user.role == 'landlord':
+        if user.role == 'landlord' or user.role == 'senhorio':
             return Tenancy.objects.filter(property__senhorio=user)
         return Tenancy.objects.filter(tenant=user)
 
-    # NOVA FUNÇÃO DE PAGAMENTO:
+    # FUNÇÃO DE PAGAMENTO COM NOTIFICAÇÃO
     @action(detail=True, methods=['post'])
     def pay(self, request, pk=None):
         tenancy = self.get_object()
         tenancy.payment_status = 'pago'
         tenancy.save()
+
+        # 🔔 DISPARA NOTIFICAÇÃO PARA O SENHORIO
+        Notificacao.objects.create(
+            user=tenancy.property.senhorio,
+            titulo="Renda Recebida! 💰",
+            mensagem=f"O inquilino {tenancy.tenant.username} acabou de pagar a renda do imóvel {tenancy.property.titulo_anuncio}."
+        )
+
         return Response({'message': 'Pagamento efetuado com sucesso!', 'status': 'pago'}, status=status.HTTP_200_OK)
     
     @action(detail=True, methods=['post'])

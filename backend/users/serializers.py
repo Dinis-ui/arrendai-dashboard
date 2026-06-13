@@ -1,6 +1,6 @@
 from rest_framework import serializers
-from .models import User, Propriedade
-from .models import PlanoSubscricao
+# Adicionei a Notificacao aos imports!
+from .models import User, Propriedade, PlanoSubscricao, Notificacao
 
 class PlanoSubscricaoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -102,3 +102,11 @@ class PropriedadeSerializer(serializers.ModelSerializer):
         if contrato:
             return contrato.id
         return None
+
+# ==========================================
+# NOVO: SERIALIZER DAS NOTIFICAÇÕES
+# ==========================================
+class NotificacaoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notificacao
+        fields = ['id', 'titulo', 'mensagem', 'lida', 'criada_em']
