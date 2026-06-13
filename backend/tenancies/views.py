@@ -52,18 +52,29 @@ class ApplicationViewSet(viewsets.ModelViewSet):
             tenant=application.tenant,
             start_date=timezone.now().date(),
             end_date=timezone.now().date() + timedelta(days=365),
-            # CORREÇÃO: Usa preco_anuncio (que é o valor real do aluguer)
             monthly_rent=application.property.preco_anuncio or application.property.valor_estimado, 
             is_active=True
         )
 
-        # Cria Chat
-        chat = Chat.objects.create(property=application.property)
-        chat.participants.add(application.tenant, application.property.senhorio) 
+        # --- LÓGICA DO CHAT CORRIGIDA ---
+        # 1. Procura se já existe um chat para esta propriedade com este inquilino e senhorio
+        chat = Chat.objects.filter(
+            property=application.property,
+            participants=application.tenant
+        ).filter(
+            participants=application.property.senhorio
+        ).first()
+
+        # 2. Se não existir, cria um novo
+        if not chat:
+            chat = Chat.objects.create(property=application.property)
+            chat.participants.add(application.tenant, application.property.senhorio) 
+        
+        # 3. Envia a mensagem (agora vai sempre parar à mesma conversa!)
         Message.objects.create(
             chat=chat,
             sender=application.property.senhorio,
-            text=f"Olá! A sua candidatura ao imóvel {application.property.titulo_anuncio} foi aceite."
+            text=f"Olá! A sua candidatura ao imóvel {application.property.titulo_anuncio or application.property.morada} foi aceite."
         )
 
         Application.objects.filter(property=application.property, status='pending').exclude(id=application.id).update(status='rejected')

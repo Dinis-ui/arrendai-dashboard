@@ -101,6 +101,9 @@ export default function Mensagens() {
 
   const activeChat = conversas.find(c => c.id === activeChatId);
 
+  // A NOSSA LINHA MÁGICA PARA O NOME COMPLETO:
+  const nomeExibicao = (user?.first_name ? `${user.first_name} ${user.last_name}`.trim() : user?.nome_completo) || user?.username || 'Utilizador';
+
   return (
     <div className="flex h-screen bg-gray-50 font-sans text-slate-900 overflow-hidden">
       {/* SIDEBAR DO INQUILINO */}
@@ -128,11 +131,11 @@ export default function Mensagens() {
 
         <div className="p-4 border-t border-slate-800">
           <div className="flex items-center gap-3 px-2 py-2">
-            <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold uppercase">
-              {user?.username ? user.username.charAt(0) : '?'}
+            <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold uppercase shrink-0">
+              {user ? nomeExibicao.charAt(0) : '?'}
             </div>
-            <div>
-              <p className="text-sm font-medium text-white">{user?.username || 'A carregar...'}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">{user ? nomeExibicao : 'A carregar...'}</p>
               <p className="text-xs text-slate-400">Inquilino</p>
             </div>
           </div>
@@ -144,7 +147,7 @@ export default function Mensagens() {
           <h1 className="text-lg font-bold text-slate-800">Mensagens</h1>
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold text-sm uppercase">
-               {user?.username ? user.username.charAt(0) : <User size={18} />}
+               {user ? nomeExibicao.charAt(0) : <User size={18} />}
             </div>
           </div>
         </header>
@@ -193,7 +196,7 @@ export default function Mensagens() {
                       <div className="w-10 h-10 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center font-bold text-sm">{activeChat.avatar}</div>
                       <div>
                         <span className="font-bold text-slate-800 block leading-tight">{activeChat.outroNome}</span>
-                        <span className="text-xs text-slate-500 font-medium">{activeChat.property_title}</span>
+                        <span className="text-xs text-slate-500 font-medium">{activeChat.property_title || `Imóvel #${activeChat.property}`}</span>
                       </div>
                     </div>
                   </div>
@@ -208,7 +211,7 @@ export default function Mensagens() {
                               ? 'bg-sky-600 text-white rounded-2xl rounded-tr-none' 
                               : 'bg-white border border-gray-100 text-slate-700 rounded-2xl rounded-tl-none'
                           }`}>
-                            <p className="leading-relaxed">{msg.text}</p>
+                            <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>
                             <p className={`text-[9px] mt-1 text-right opacity-70 ${isMe ? 'text-white' : 'text-slate-500'}`}>
                               {new Date(msg.timestamp).toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'})}
                             </p>
