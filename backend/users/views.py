@@ -5,6 +5,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth import get_user_model, update_session_auth_hash
 from rest_framework.decorators import action
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from django.db.models import Sum
+from tenancies.models import Tenancy # Para calcularmos a receita (MRR)
+from .models import Propriedade, User
 
 # Importações dos modelos e serializers (Adicionado Notificacao e NotificacaoSerializer)
 from .models import Propriedade, PlanoSubscricao, Notificacao
@@ -201,3 +207,61 @@ class MarcarNotificacoesLidasView(APIView):
     def perform_create(self, serializer):
         serializer.save(senhorio=self.request.user)
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_dashboard(request):
+    # Proteção: Só Admins entram!
+    if request.user.role != 'admin' and not request.user.is_superuser:
+        return Response({'erro': 'Acesso negado'}, status=403)
+
+    total_users = User.objects.count()
+    senhorios = User.objects.filter(role='landlord', status_verificacao='pendente')
+    imoveis = Propriedade.objects.filter(status_aprovacao='pendente')
+    
+    # Receita MRR (Soma mensal de todos os contratos ativos na plataforma)
+    mrr = Tenancy.objects.filter(is_active=True).aggregate(Sum('monthly_rent'))['monthly_rent__sum'] or 0
+
+    return Response({
+        'stats': {
+            'totalUsers': total_users,
+            'senhoriosPendentes': senhorios.count(),
+            'anunciosPendentes': imoveis.count(),
+            'receitaMensal': f"{mrr}€"
+        },
+        'senhorios': [{
+            'id': s.id, 
+            'nome': s.nome_completo or s.username, 
+            'email': s.email, 
+            'nif': s.nif or 'N/A', 
+            'data': s.date_joined.strftime('%d/%m/%Y'),
+            'docs': request.build_absolute_uri(s.documento_verificacao.url) if s.documento_verificacao else None
+        } for s in senhorios],
+        'imoveis': [{
+            'id': i.id, 
+            'senhorio': i.senhorio.username, 
+            'morada': i.morada,
+            'preco': f"{i.preco_anuncio or i.valor_estimado}€", 
+            'tipo': i.get_tipo_casa_display(), 
+            'data': i.data_criacao.strftime('%d/%m/%Y')
+        } for i in imoveis]
+    })
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def moderar_senhorio(request, pk):
+    if request.user.role != 'admin' and not request.user.is_superuser: 
+        return Response(status=403)
+    senhorio = User.objects.get(pk=pk)
+    senhorio.status_verificacao = request.data.get('acao') # 'aprovado' ou 'rejeitado'
+    senhorio.save()
+    return Response({'status': 'ok'})
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def moderar_imovel(request, pk):
+    if request.user.role != 'admin' and not request.user.is_superuser: 
+        return Response(status=403)
+    imovel = Propriedade.objects.get(pk=pk)
+    imovel.status_aprovacao = request.data.get('acao') # 'aprovado' ou 'rejeitado'
+    imovel.save()
+    return Response({'status': 'ok'})

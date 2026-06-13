@@ -1,5 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+from . import views
 from .views import (
     UserViewSet, 
     UserRegistrationView, 
@@ -40,5 +41,7 @@ urlpatterns = [
     # Rotas do Router
     path('', include(router.urls)),
 
-    
+    path('admin/dashboard/', views.admin_dashboard),
+    path('admin/senhorio/<int:pk>/', views.moderar_senhorio),
+    path('admin/imovel/<int:pk>/', views.moderar_imovel),
 ]

@@ -27,6 +27,21 @@ class User(AbstractUser):
     iban = models.CharField(max_length=34, blank=True, null=True)
     morada_fiscal = models.TextField(blank=True, null=True)
 
+    # 🔥 AS LINHAS NOVAS QUE TENS DE ADICIONAR COMEÇAM AQUI 🔥
+    documento_verificacao = models.FileField(upload_to='verificacao_senhorios/', blank=True, null=True)
+    
+    STATUS_VERIFICACAO_CHOICES = (
+        ('pendente', 'Pendente de Verificação'),
+        ('aprovado', 'Aprovado'),
+        ('rejeitado', 'Rejeitado'),
+    )
+    status_verificacao = models.CharField(
+        max_length=20, 
+        choices=STATUS_VERIFICACAO_CHOICES, 
+        default='pendente'
+    )
+    # 🔥 ACABAM AQUI 🔥
+
     def __str__(self):
         return self.username
     
