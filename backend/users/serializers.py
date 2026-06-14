@@ -46,16 +46,24 @@ class UserSerializer(serializers.ModelSerializer):
 class PropriedadeSerializer(serializers.ModelSerializer):
     inquilino_atual = serializers.SerializerMethodField()
     estado = serializers.SerializerMethodField()
-    
     contrato_inicio = serializers.SerializerMethodField()
     contrato_fim = serializers.SerializerMethodField()
     perfil_inquilino = serializers.SerializerMethodField()
     contrato_id = serializers.SerializerMethodField()
+    
+    #  1. ADICIONA ISTO AQUI 
+    nome_senhorio = serializers.SerializerMethodField()
 
     class Meta:
         model = Propriedade
         fields = '__all__'
         read_only_fields = ['senhorio', 'status_aprovacao', 'inquilino_atual', 'contrato_inicio', 'contrato_fim', 'perfil_inquilino', 'contrato_id']
+
+    #  2. E ADICIONA ESTA FUNÇÃO NO FINAL DO SERIALIZER 
+    def get_nome_senhorio(self, obj):
+        # Tenta enviar o nome completo. Se não existir, envia o username.
+        return obj.senhorio.nome_completo or obj.senhorio.username
+
 
     def get_inquilino_atual(self, obj):
         contrato = obj.active_tenancies.filter(is_active=True).first()

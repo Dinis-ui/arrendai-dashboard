@@ -1,13 +1,12 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
-import { MessageSquare, X, Send, UploadCloud, CheckCircle, FileText } from 'lucide-react';
+import { MessageSquare, X, Send, UploadCloud, CheckCircle, FileText, MapPin } from 'lucide-react';
 
 export default function DetalhesImovel() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
 
-  // NOVO: Estado para guardar o imóvel que vem do Django e o estado de carregamento
   const [imovel, setImovel] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -20,7 +19,6 @@ export default function DetalhesImovel() {
   const [candidaturaEnviada, setCandidaturaEnviada] = useState(false);
   const [mensagemCandidatura, setMensagemCandidatura] = useState('');
   
-  // ESTADOS NOVOS PARA UPLOAD DE DOCUMENTOS
   const [ficheiros, setFicheiros] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -72,7 +70,8 @@ export default function DetalhesImovel() {
               'https://images.pexels.com/photos/2724749/pexels-photo-2724749.jpeg?auto=compress&cs=tinysrgb&w=600'
             ],
             amenities: data.comodidades ? data.comodidades.split(', ') : ['Verificado', 'Disponível Online'],
-            senhorio: data.senhorio_nome || 'Senhorio Verificado' 
+            // LER O NOME REAL DO SENHORIO QUE VEM DO DJANGO
+            senhorio: data.nome_senhorio || data.senhorio_nome || 'Senhorio Verificado' 
           });
         }
       } catch (error) {
@@ -107,7 +106,6 @@ export default function DetalhesImovel() {
         if (response.ok) {
           setCandidaturaEnviada(true);
 
-          // Mantemos a tua lógica das mensagens visuais
           const novaConversa = {
             id: Date.now(),
             senhorio: imovel.senhorio,
@@ -125,17 +123,14 @@ export default function DetalhesImovel() {
           setTimeout(() => {
             setIsCandidaturaOpen(false);
             setCandidaturaEnviada(false);
-            navigate(-1); // Volta à pesquisa
+            navigate(-1);
           }, 3500);
         } else {
-          // LÊ O ERRO QUE O DJANGO ENVIOU (O "CADEADO")
           const erroData = await response.json();
-          
           if (erroData.erro) {
-            // Mostra o erro exato: "Já tens uma candidatura ativa..."
             alert(Array.isArray(erroData.erro) ? erroData.erro[0] : erroData.erro);
           } else if (erroData.non_field_errors) {
-            alert(erroData.non_field_errors[0]); // Caso o Django envie num formato standard
+            alert(erroData.non_field_errors[0]); 
           } else {
             alert("Não foi possível enviar a candidatura. Verifica se já te candidataste a esta casa.");
           }
@@ -211,7 +206,7 @@ export default function DetalhesImovel() {
               <span className="bg-slate-200 text-slate-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">{imovel.tipo}</span>
             </div>
             <h1 className="text-3xl font-bold text-slate-900">{imovel.title}</h1>
-            <p className="text-slate-500 mt-1 flex items-center gap-1">Localização: {imovel.location}</p>
+            <p className="text-slate-500 mt-1 flex items-center gap-1"><MapPin size={16} /> {imovel.location}</p>
           </div>
           <div className="text-right">
             <p className="text-3xl font-bold text-sky-600">{imovel.price}€ <span className="text-lg font-normal text-slate-500">/ mês</span></p>
@@ -266,6 +261,23 @@ export default function DetalhesImovel() {
                 ))}
               </div>
             </section>
+
+            {/* NOVA SECÇÃO: MAPA DE LOCALIZAÇÃO */}
+            <section className="pt-6 border-t border-slate-200">
+              <h2 className="text-xl font-bold text-slate-900 mb-4">Localização</h2>
+              <div className="w-full h-80 rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-slate-100">
+                <iframe
+                  title="Mapa da Propriedade"
+                  width="100%"
+                  height="100%"
+                  frameBorder="0"
+                  scrolling="no"
+                  marginHeight={0}
+                  marginWidth={0}
+                  src={`https://www.google.com/maps?q=${encodeURIComponent(imovel.location)}&output=embed`}
+                ></iframe>
+              </div>
+            </section>
           </div>
 
           <div className="lg:col-span-1">
@@ -291,8 +303,9 @@ export default function DetalhesImovel() {
                 Sem custos de candidatura.
               </p>
 
+              {/* DADOS REAIS DO SENHORIO */}
               <div className="flex items-center gap-4">
-                <div className="h-12 w-12 bg-slate-200 rounded-full flex items-center justify-center font-bold text-slate-600">
+                <div className="h-12 w-12 bg-sky-100 rounded-full flex items-center justify-center font-bold text-sky-700 shadow-sm">
                   {imovel.senhorio.substring(0, 2).toUpperCase()}
                 </div>
                 <div>
@@ -311,7 +324,7 @@ export default function DetalhesImovel() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="bg-slate-50 border-b border-slate-200 p-4 flex justify-between items-center">
               <div>
-                <h3 className="font-bold text-slate-900">Mensagem para o Senhorio</h3>
+                <h3 className="font-bold text-slate-900">Mensagem para {imovel.senhorio}</h3>
                 <p className="text-xs text-slate-500">Sobre: {imovel.title}</p>
               </div>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-1">
@@ -326,7 +339,7 @@ export default function DetalhesImovel() {
                     <Send size={24} />
                   </div>
                   <h4 className="text-lg font-bold text-slate-900 mb-2">Mensagem Enviada!</h4>
-                  <p className="text-slate-500">O senhorio foi notificado e irá responder em breve.</p>
+                  <p className="text-slate-500">O senhorio foi notificado e irá responder no seu portal.</p>
                 </div>
               ) : (
                 <form onSubmit={enviarMensagem}>
@@ -335,7 +348,7 @@ export default function DetalhesImovel() {
                     required
                     value={mensagem}
                     onChange={(e) => setMensagem(e.target.value)}
-                    placeholder={`Estou muito interessado neste imóvel. Ainda está disponível para visitas?`}
+                    placeholder={`Olá ${imovel.senhorio.split(' ')[0]}, estou muito interessado neste imóvel. Ainda está disponível para visitas?`}
                     className="w-full h-32 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm focus:border-sky-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 resize-none mb-4"
                   ></textarea>
                   <button type="submit" className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2">
