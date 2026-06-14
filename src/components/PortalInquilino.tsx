@@ -4,7 +4,7 @@ import {
   Search, MapPin, Home, FileText, Wallet, Bell, ChevronDown, 
   SlidersHorizontal, Heart, ArrowUpRight, User, MessageSquare, 
   X, UploadCloud, Trash2, CreditCard, Smartphone, Lock, LogOut,
-  CheckCircle, XCircle, Clock, Ban
+  CheckCircle, XCircle, Clock, Ban, AlertCircle, CheckCircle2
 } from 'lucide-react';
 
 const menuItems = [
@@ -158,11 +158,9 @@ export default function PortalInquilino() {
     areaMin: '',
   });
   
+  // ESTADOS DE NOTIFICAÇÕES REAIS
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notificacoes, setNotificacoes] = useState([
-    { id: 1, titulo: 'Candidatura Aprovada!', desc: 'O senhorio aceitou a tua candidatura.', tempo: 'Há 10 min', lida: false },
-  ]);
-
+  const [notificacoes, setNotificacoes] = useState<any[]>([]);
   const naoLidas = notificacoes.filter(n => !n.lida).length;
 
   const [isCandidaturaOpen, setIsCandidaturaOpen] = useState(false);
@@ -178,6 +176,22 @@ export default function PortalInquilino() {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+
+  // ESTADOS DOS TOASTS (Avisos de Sucesso e Erro)
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastErro, setToastErro] = useState<{ativo: boolean, mensagem: string}>({ ativo: false, mensagem: '' });
+
+  const mostrarSucesso = (mensagem: string) => {
+    setToastMessage(mensagem);
+    setShowSuccessToast(true);
+    setTimeout(() => setShowSuccessToast(false), 4000);
+  };
+
+  const mostrarErro = (mensagem: string) => {
+    setToastErro({ ativo: true, mensagem });
+    setTimeout(() => setToastErro({ ativo: false, mensagem: '' }), 5000);
+  };
 
   const handleLogoutClick = () => setIsLogoutModalOpen(true);
   
@@ -215,7 +229,50 @@ export default function PortalInquilino() {
       }
     };
     carregarUtilizador();
-  }, [navigate]);
+  }, [navigate, activeTab]); 
+
+  // CARREGAR NOTIFICAÇÕES (Em Tempo Real)
+  const carregarNotificacoes = async () => {
+    const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+    if (!token) return;
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/users/notificacoes/', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setNotificacoes(await res.json());
+      }
+    } catch (error) {
+      console.error("Erro a carregar notificações:", error);
+    }
+  };
+
+  useEffect(() => {
+    carregarNotificacoes();
+    const intervalo = setInterval(carregarNotificacoes, 30000);
+    return () => clearInterval(intervalo);
+  }, []);
+
+  const handleToggleNotificacoes = async () => {
+    const newState = !showNotifications;
+    setShowNotifications(newState);
+
+    if (newState && naoLidas > 0) {
+      const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+      try {
+        await fetch('http://127.0.0.1:8000/api/users/notificacoes/lidas/', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        setNotificacoes(prev => prev.map(n => ({ ...n, lida: true })));
+      } catch (error) {
+        console.error("Erro a marcar notificações como lidas", error);
+      }
+    }
+  };
+
+  // VERIFICA SE O PERFIL ESTÁ INCOMPLETO
+  const isPerfilIncompleto = user && (!user.telefone || !user.nif || !user.iban);
 
   const guardarConta = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -238,15 +295,19 @@ export default function PortalInquilino() {
       if (response.ok) {
         const dadosNovos = await response.json();
         setUser(dadosNovos); 
-        alert("Dados guardados com sucesso!");
+        mostrarSucesso("Dados guardados com sucesso!");
+      } else {
+        mostrarErro("Erro ao guardar os dados no servidor.");
       }
-    } catch (error) { console.error('Erro de rede:', error); }
+    } catch (error) { 
+      mostrarErro("Ocorreu um erro de rede. Tenta novamente.");
+    }
   };
 
   const atualizarPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      alert("A nova password e a confirmação não coincidem!");
+      mostrarErro("A nova password e a confirmação não coincidem!");
       return;
     }
     const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
@@ -261,10 +322,17 @@ export default function PortalInquilino() {
       });
 
       if (response.ok) {
-        alert("Password atualizada com sucesso! Por favor, faz login novamente.");
-        confirmarLogout();
+        mostrarSucesso("Password atualizada com sucesso! A terminar sessão...");
+        setTimeout(() => {
+          confirmarLogout();
+        }, 2500);
+      } else {
+        const err = await response.json();
+        mostrarErro(err.error || "A password atual está incorreta.");
       }
-    } catch (error) { console.error('Erro de rede:', error); }
+    } catch (error) { 
+      mostrarErro("Erro na ligação. Tenta novamente.");
+    }
   };
 
   useEffect(() => {
@@ -359,10 +427,12 @@ export default function PortalInquilino() {
         if (response.ok) {
           setRendasReais(prev => prev.map(r => r.id === rendaAPagar.id ? { ...r, payment_status: 'pago' } : r));
           setIsPaymentModalOpen(false);
-          alert("Pagamento processado com sucesso!");
+          mostrarSucesso("Pagamento processado com sucesso!");
+        } else {
+          mostrarErro("Não foi possível processar o pagamento.");
         }
       } catch (error) {
-        alert("Erro na ligação ao banco.");
+        mostrarErro("Erro na ligação à Entidade Bancária.");
       } finally {
         setIsProcessingPayment(false);
       }
@@ -379,12 +449,20 @@ export default function PortalInquilino() {
         });
         if (response.ok || response.status === 204) {
           setCandidaturasReais(prev => prev.filter(c => c.id !== id));
+          mostrarSucesso("Candidatura retirada.");
         }
-      } catch (error) { console.error("Erro ao apagar:", error); }
+      } catch (error) { mostrarErro("Erro ao retirar a candidatura."); }
     }
   };
 
+  // FUNÇÃO QUE BLOQUEIA A CANDIDATURA SE O PERFIL ESTIVER INCOMPLETO
   const handleOpenCandidatura = (imovel: any) => {
+    if (isPerfilIncompleto) {
+      mostrarErro("Ação Bloqueada: Para garantir a segurança da plataforma, precisas de ter o Perfil completo (Telefone, NIF e IBAN) antes de enviar candidaturas a propriedades.");
+      setActiveTab('Perfil');
+      return;
+    }
+
     setImovelCandidatura(imovel);
     setMensagemCandidatura('');
     setFicheiros([]);
@@ -400,11 +478,11 @@ export default function PortalInquilino() {
       filesArray.forEach(file => {
         const validTypes = ['application/pdf', 'image/jpeg', 'image/png'];
         if (!validTypes.includes(file.type)) {
-          alert(`O ficheiro "${file.name}" tem um formato inválido.`);
+          mostrarErro(`O ficheiro "${file.name}" tem um formato inválido.`);
           return;
         }
         if (file.size > 10 * 1024 * 1024) {
-          alert("Ficheiro demasiado grande.");
+          mostrarErro(`O ficheiro "${file.name}" é demasiado grande.`);
           return;
         }
         validFiles.push(file);
@@ -439,9 +517,11 @@ export default function PortalInquilino() {
           setActiveTab('Minhas Candidaturas');
         }, 3500);
       } else {
-        alert("Erro ao candidatar. Tenta de novo.");
+        mostrarErro("Erro ao enviar a candidatura. Tenta novamente.");
       }
-    } catch (error) { console.error(error); }
+    } catch (error) { 
+      mostrarErro("Erro na ligação ao servidor.");
+    }
   };
 
   const setFilter = (key: keyof Filters) => (value: string) =>
@@ -460,7 +540,7 @@ export default function PortalInquilino() {
 
   return (
     <div className="flex h-screen bg-gray-50 font-sans text-slate-900 relative">
-      <aside className="w-64 bg-slate-900 text-white flex flex-col z-10">
+      <aside className="w-64 bg-slate-900 text-white flex flex-col z-10 shrink-0">
         <div className="p-6 flex items-center gap-3">
           <div className="w-8 h-8 bg-sky-500 rounded-lg flex items-center justify-center">
             <span className="font-bold text-xl">A</span>
@@ -503,29 +583,60 @@ export default function PortalInquilino() {
               <p className="text-sm font-medium text-white truncate">{user ? nomeExibicao : 'A carregar...'}</p>
               <p className="text-xs text-slate-400">Inquilino</p>
             </div>
+            {/* Bolinha vermelha no perfil se faltarem dados */}
+            {isPerfilIncompleto && (
+              <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shrink-0"></div>
+            )}
           </div>
         </div>
       </aside>
 
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-hidden relative">
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 flex-shrink-0 relative z-20">
           <div>
             <h1 className="text-lg font-bold text-slate-800">Portal do Inquilino</h1>
             <p className="text-xs text-slate-400">Encontra o teu próximo lar</p>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
+            {/* SININHO E DROPDOWN */}
             <div className="relative">
               <button 
-                onClick={() => setShowNotifications(!showNotifications)}
+                onClick={handleToggleNotificacoes}
                 className={`p-2 rounded-full relative transition-colors ${showNotifications ? 'bg-sky-50 text-sky-600' : 'text-gray-500 hover:bg-gray-100'}`}
               >
                 <Bell size={20} />
-                {naoLidas > 0 && (
-                  <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
-                )}
+                {naoLidas > 0 && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
               </button>
+
+              {showNotifications && (
+                <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                  <div className="p-4 border-b border-gray-50 flex justify-between items-center bg-slate-50">
+                    <h3 className="font-bold text-slate-800 text-sm">Notificações</h3>
+                    {naoLidas > 0 && <span className="text-xs bg-sky-100 text-sky-600 font-bold px-2 py-1 rounded-full">{naoLidas} novas</span>}
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {notificacoes.length === 0 ? (
+                      <div className="p-6 text-center text-slate-500 text-sm">
+                        <Bell size={24} className="mx-auto text-slate-300 mb-2" />
+                        Nenhuma notificação por agora.
+                      </div>
+                    ) : (
+                      notificacoes.map(notif => (
+                        <div key={notif.id} className={`p-4 border-b border-gray-50 transition-colors ${!notif.lida ? 'bg-sky-50/40' : 'hover:bg-slate-50'}`}>
+                          <p className="font-bold text-sm text-slate-800 mb-1">{notif.titulo}</p>
+                          <p className="text-xs text-slate-500 mb-2 leading-relaxed">{notif.mensagem}</p>
+                          <p className="text-[10px] text-slate-400 font-medium">
+                            {new Date(notif.criada_em).toLocaleDateString('pt-PT')} às {new Date(notif.criada_em).toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'})}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
+
             <div 
               onClick={() => setActiveTab('Perfil')}
               className="w-9 h-9 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold text-sm uppercase shrink-0 cursor-pointer hover:ring-2 hover:ring-sky-200 transition-all"
@@ -535,7 +646,23 @@ export default function PortalInquilino() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto bg-slate-50">
+        {/* ALERTA INTELIGENTE (ONBOARDING) */}
+        {isPerfilIncompleto && activeTab !== 'Perfil' && (
+          <div className="bg-amber-50 border-b border-amber-200 px-8 py-3 flex items-center justify-between z-10 relative">
+            <div className="flex items-center gap-3 text-amber-800">
+              <AlertCircle size={18} className="text-amber-500" />
+              <p className="text-sm font-medium">Atenção: O teu perfil está incompleto (falta Telemóvel, NIF ou IBAN). Preenche os dados para poderes submeter candidaturas a imóveis.</p>
+            </div>
+            <button 
+              onClick={() => setActiveTab('Perfil')}
+              className="text-xs font-bold bg-amber-200 text-amber-800 px-4 py-1.5 rounded-lg hover:bg-amber-300 transition-colors"
+            >
+              Completar Agora
+            </button>
+          </div>
+        )}
+
+        <div className="flex-1 overflow-y-auto bg-slate-50 z-0 relative">
           {activeTab === 'Perfil' && (
             <div className="p-8 max-w-5xl mx-auto animate-in fade-in duration-300">
               <div className="flex flex-col md:flex-row gap-8">
@@ -625,7 +752,7 @@ export default function PortalInquilino() {
                         </div>
                         <div>
                           <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Confirmar nova palavra-passe</label>
-                          <input type="password" value={confirmPassword} onChange={e => setNewPassword(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-sky-500 focus:bg-white" />
+                          <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-sky-500 focus:bg-white" />
                         </div>
                         <div className="pt-4">
                           <button type="submit" className="bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 px-6 rounded-xl transition-colors shadow-sm w-full md:w-auto">Atualizar Password</button>
@@ -769,7 +896,6 @@ export default function PortalInquilino() {
                     const isCancelado = r.status?.toLowerCase() === 'cancelado' || r.estado?.toLowerCase() === 'cancelado' || r.is_active === false;
                     const isPago = r.payment_status === 'pago';
                     
-                    // LÓGICA INTELIGENTE DO VALOR: Procura pelo monthly_rent do teu modelo!
                     const valorRendaBruto = r.monthly_rent || r.property_details?.preco_anuncio || r.property_details?.valor_estimado || 0;
                     const valorRenda = Number(valorRendaBruto).toLocaleString('pt-PT');
 
@@ -847,23 +973,34 @@ export default function PortalInquilino() {
               <button onClick={() => setIsCandidaturaOpen(false)} className="text-slate-400 hover:text-slate-600 p-1"><X size={20} /></button>
             </div>
             <div className="p-6">
-              <form onSubmit={submeterCandidatura} className="space-y-6">
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">1. Mensagem de Apresentação</label>
-                  <textarea required value={mensagemCandidatura} onChange={(e) => setMensagemCandidatura(e.target.value)} className="w-full h-28 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm focus:border-sky-500 focus:bg-white resize-none"></textarea>
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">2. Documentos Comprovativos</label>
-                  <input type="file" multiple className="hidden" ref={fileInputRef} accept=".pdf,.jpg,.jpeg,.png" onChange={handleFileChange} />
-                  <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:bg-slate-50 hover:border-sky-300 cursor-pointer">
-                    <UploadCloud size={28} className="mx-auto text-sky-500 mb-2" />
-                    <p className="text-sm font-medium text-slate-700">Clica para enviar ficheiros</p>
+              {candidaturaEnviada ? (
+                <div className="text-center py-10 animate-in zoom-in-95">
+                  <div className="w-20 h-20 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle2 size={40} />
                   </div>
+                  <h3 className="text-2xl font-bold text-slate-800 mb-2">Proposta Enviada!</h3>
+                  <p className="text-slate-500">O senhorio vai analisar o teu perfil em breve.</p>
                 </div>
-                <div className="pt-4 border-t border-slate-100">
-                  <button type="submit" className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-4 rounded-xl">Confirmar e Enviar Candidatura</button>
-                </div>
-              </form>
+              ) : (
+                <form onSubmit={submeterCandidatura} className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">1. Mensagem de Apresentação</label>
+                    <textarea required value={mensagemCandidatura} onChange={(e) => setMensagemCandidatura(e.target.value)} className="w-full h-28 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm focus:border-sky-500 focus:bg-white resize-none"></textarea>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">2. Documentos Comprovativos</label>
+                    <input type="file" multiple className="hidden" ref={fileInputRef} accept=".pdf,.jpg,.jpeg,.png" onChange={handleFileChange} />
+                    <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:bg-slate-50 hover:border-sky-300 cursor-pointer transition-colors">
+                      <UploadCloud size={28} className="mx-auto text-sky-500 mb-2" />
+                      <p className="text-sm font-medium text-slate-700">Clica para enviar ficheiros</p>
+                      {ficheiros.length > 0 && <p className="text-xs text-emerald-600 font-bold mt-2">{ficheiros.length} ficheiro(s) selecionado(s)</p>}
+                    </div>
+                  </div>
+                  <div className="pt-4 border-t border-slate-100">
+                    <button type="submit" className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-sky-500/20 transition-colors">Confirmar e Enviar Candidatura</button>
+                  </div>
+                </form>
+              )}
             </div>
           </div>
         </div>
@@ -983,6 +1120,33 @@ export default function PortalInquilino() {
           </div>
         </div>
       )}
+
+      {/* TOAST GLOBAL SUCESSO */}
+      {showSuccessToast && (
+        <div className="fixed bottom-10 right-10 bg-emerald-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 z-[100] animate-in fade-in slide-in-from-bottom-6">
+          <div className="bg-white/20 p-2 rounded-full"><CheckCircle2 size={24} className="text-white" /></div>
+          <div>
+            <p className="font-bold text-sm">Sucesso!</p>
+            <p className="text-xs text-emerald-100 mt-0.5">{toastMessage}</p>
+          </div>
+          <button onClick={() => setShowSuccessToast(false)} className="ml-4 text-emerald-200 hover:text-white"><X size={18} /></button>
+        </div>
+      )}
+      
+      {/* TOAST DE ERRO VERMELHO */}
+      {toastErro.ativo && (
+        <div className="fixed bottom-8 right-8 flex items-start gap-4 p-5 w-full max-w-md bg-rose-50 border border-rose-200 rounded-2xl shadow-2xl shadow-rose-900/10 z-[100] animate-in slide-in-from-bottom-8 fade-in duration-300">
+          <AlertCircle className="text-rose-600 shrink-0 mt-0.5" size={24} />
+          <div>
+            <h4 className="text-rose-900 font-bold text-lg mb-1">Atenção</h4>
+            <p className="text-rose-700 text-sm font-medium leading-relaxed">{toastErro.mensagem}</p>
+          </div>
+          <button onClick={() => setToastErro({...toastErro, ativo: false})} className="text-rose-400 hover:text-rose-600 ml-auto transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+      )}
+      
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
   Plus, MoreVertical, CheckCircle2, Clock, XCircle, 
   X, MapPin, Banknote, FileText, Edit2, 
-  PauseCircle, Home, Megaphone, AlertTriangle
+  PauseCircle, Home, Megaphone, AlertTriangle, AlertCircle
 } from 'lucide-react';
 
 export default function Anuncios() {
@@ -12,6 +12,14 @@ export default function Anuncios() {
   const [menuAberto, setMenuAberto] = useState<number | null>(null);
   const [anuncioSendoEditado, setAnuncioSendoEditado] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
+
+  // Estado para o erro vermelho de compliance
+  const [toastErro, setToastErro] = useState<{ativo: boolean, mensagem: string}>({ ativo: false, mensagem: '' });
+
+  const mostrarErro = (mensagem: string) => {
+    setToastErro({ ativo: true, mensagem });
+    setTimeout(() => setToastErro({ ativo: false, mensagem: '' }), 5000); // Fica 5 segundos
+  };
 
   // 1. CARREGAR DADOS REAIS DO DJANGO
   const carregarDados = async () => {
@@ -60,13 +68,9 @@ export default function Anuncios() {
     const isContaCompleta = user.telefone && user.nif && user.iban && (user.morada_fiscal || user.morada);
     
     if (!isContaCompleta) {
-      alert("⚠️ AÇÃO BLOQUEADA\n\nPara garantir a segurança da plataforma, precisa de ter o Perfil de Faturação completo (Telefone, NIF, IBAN e Morada Fiscal) antes de publicar anúncios.\n\nPor favor, dirija-se à secção 'Perfil' e complete os seus dados.");
+      mostrarErro("Ação Bloqueada: Para garantir a segurança da plataforma, precisas de ter o teu Perfil completo (Telefone, NIF, IBAN e Morada) antes de publicar anúncios. Dirige-te à secção 'A Minha Conta' nas tuas Definições de Perfil e completa os teus dados.");
       return false;
     }
-
-    // (Opcional: Se no futuro o Backend enviar os documentos legais no User, podias testar aqui:)
-    // const temDocumentosVerificados = user.documentos_aprovados === true;
-    // if (!temDocumentosVerificados) { ... return false; }
 
     return true;
   };
@@ -375,7 +379,7 @@ export default function Anuncios() {
         </div>
       )}
 
-      {/* TOAST DE AVISOS */}
+      {/* TOAST DE AVISOS GERAIS DE SUCESSO */}
       {toastMsg && (
         <div className="fixed bottom-10 right-10 bg-emerald-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 animate-in fade-in slide-in-from-bottom-8 z-50">
           <div className="bg-white/20 p-2 rounded-full">
@@ -386,6 +390,20 @@ export default function Anuncios() {
           </div>
           <button onClick={() => setToastMsg('')} className="ml-4 text-emerald-200 hover:text-white transition-colors">
             <X size={18} />
+          </button>
+        </div>
+      )}
+
+      {/* TOAST DE ERRO DE COMPLIANCE / PERFIL INCOMPLETO */}
+      {toastErro.ativo && (
+        <div className="fixed bottom-8 right-8 flex items-start gap-4 p-5 w-full max-w-md bg-rose-50 border border-rose-200 rounded-2xl shadow-2xl shadow-rose-900/10 z-[100] animate-in slide-in-from-bottom-8 fade-in duration-300">
+          <AlertCircle className="text-rose-600 shrink-0 mt-0.5" size={24} />
+          <div>
+            <h4 className="text-rose-900 font-bold text-lg mb-1">Ação Bloqueada</h4>
+            <p className="text-rose-700 text-sm font-medium leading-relaxed">{toastErro.mensagem}</p>
+          </div>
+          <button onClick={() => setToastErro({...toastErro, ativo: false})} className="text-rose-400 hover:text-rose-600 ml-auto transition-colors">
+            <X size={20} />
           </button>
         </div>
       )}

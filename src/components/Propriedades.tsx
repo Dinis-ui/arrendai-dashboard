@@ -38,12 +38,39 @@ export default function Propriedades({ onMudarParaAnuncios, onMudarParaMensagens
   const [valorDeducao, setValorDeducao] = useState('');
   const [motivoDeducao, setMotivoDeducao] = useState('');
 
+  // ESTADO DO UTILIZADOR PARA VERIFICAÇÃO DE PERFIL OBRIGATÓRIO
+  const [user, setUser] = useState<any>(null);
+
   const [toastErro, setToastErro] = useState<{ativo: boolean, mensagem: string}>({ ativo: false, mensagem: '' });
 
   const mostrarErro = (mensagem: string) => {
     setToastErro({ ativo: true, mensagem });
     setTimeout(() => setToastErro({ ativo: false, mensagem: '' }), 5000); // Fica 5 segundos para ele ler bem
   };
+
+  // ==============================================================
+  // 0. CARREGAR DADOS DO SENHORIO (Para validação de perfil incompleto)
+  // ==============================================================
+  useEffect(() => {
+    const carregarUtilizador = async () => {
+      const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+      if (!token) return;
+      try {
+        const res = await fetch('http://127.0.0.1:8000/api/users/me/', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          setUser(await res.json());
+        }
+      } catch (e) {
+        console.error("Erro ao carregar utilizador nas propriedades:", e);
+      }
+    };
+    carregarUtilizador();
+  }, []);
+
+  // Lógica inteligente de compliance
+  const isPerfilIncompleto = user && (!user.telefone || !user.nif || !user.iban);
 
   // ==============================================================
   // 1. CARREGAR PROPRIEDADES DA BASE DE DADOS (GET)
@@ -725,8 +752,15 @@ export default function Propriedades({ onMudarParaAnuncios, onMudarParaMensagens
           <p className="text-sm text-slate-500">Gere as tuas unidades físicas e ocupação.</p>
         </div>
         
+        {/* INTERCEPTAÇÃO E VALIDAÇÃO DO BOTÃO DE NOVA PROPRIEDADE */}
         <button 
-          onClick={() => setIsAddModalOpen(true)}
+          onClick={() => {
+            if (isPerfilIncompleto) {
+              mostrarErro("Ação Bloqueada: Tens de preencher todos os campos obrigatórios do teu Perfil (Telefone, NIF e IBAN) nas definições antes de poderes adicionar novas propriedades.");
+              return;
+            }
+            setIsAddModalOpen(true);
+          }}
           className="flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-sky-600/20"
         >
           <Plus size={20} /> Nova Propriedade
@@ -846,7 +880,8 @@ export default function Propriedades({ onMudarParaAnuncios, onMudarParaMensagens
           <button onClick={() => setShowSuccessToast(false)} className="ml-4 text-emerald-200 hover:text-white"><X size={18} /></button>
         </div>
       )}
-      {/* TOAST DE ERRO DE LIMITES DO PLANO */}
+      
+      {/* TOAST DE ERRO DE COMPLIANCE / LIMITES DO PLANO */}
       {toastErro.ativo && (
         <div className="fixed bottom-8 right-8 flex items-start gap-4 p-5 w-full max-w-md bg-rose-50 border border-rose-200 rounded-2xl shadow-2xl shadow-rose-900/10 z-[100] animate-in slide-in-from-bottom-8 fade-in duration-300">
           <AlertCircle className="text-rose-600 shrink-0 mt-0.5" size={24} />

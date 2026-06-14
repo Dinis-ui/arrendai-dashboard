@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Megaphone, Users, Wallet, MessageSquare, Search, Bell, ShieldCheck, AlertCircle, LogOut } from 'lucide-react';
+import { Building2, Megaphone, Users, Wallet, MessageSquare, Search, Bell, ShieldCheck, AlertCircle, LogOut, User } from 'lucide-react';
 
 // IMPORTAÇÃO DOS COMPONENTES
 import Anuncios from './Anuncios';
@@ -213,42 +213,56 @@ export default function DashboardSenhorio() {
             <input type="text" placeholder="Pesquisar propriedades, inquilinos..." className="w-full pl-11 pr-4 py-2 bg-slate-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:bg-white outline-none transition-all" />
           </div>
           
-          {/* SININHO E DROPDOWN */}
-          <div className="relative">
-            <button 
-              onClick={handleToggleNotificacoes}
-              className={`p-2 rounded-full relative transition-colors ${showNotifications ? 'bg-sky-50 text-sky-600' : 'text-gray-500 hover:bg-gray-100'}`}
-            >
-              <Bell size={20} />
-              {naoLidas > 0 && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
-            </button>
+          {/* GRUPO DA DIREITA: SINO E PERFIL */}
+          <div className="flex items-center gap-4">
+            
+            {/* SININHO E DROPDOWN */}
+            <div className="relative">
+              <button 
+                onClick={handleToggleNotificacoes}
+                className={`p-2 rounded-full relative transition-colors ${showNotifications ? 'bg-sky-50 text-sky-600' : 'text-gray-500 hover:bg-gray-100'}`}
+              >
+                <Bell size={20} />
+                {naoLidas > 0 && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
+              </button>
 
-            {showNotifications && (
-              <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
-                <div className="p-4 border-b border-gray-50 flex justify-between items-center bg-slate-50">
-                  <h3 className="font-bold text-slate-800 text-sm">Notificações</h3>
-                  {naoLidas > 0 && <span className="text-xs bg-sky-100 text-sky-600 font-bold px-2 py-1 rounded-full">{naoLidas} novas</span>}
-                </div>
-                <div className="max-h-80 overflow-y-auto">
-                  {notificacoes.length === 0 ? (
-                    <div className="p-6 text-center text-slate-500 text-sm">
-                      <Bell size={24} className="mx-auto text-slate-300 mb-2" />
-                      Nenhuma notificação por agora.
-                    </div>
-                  ) : (
-                    notificacoes.map(notif => (
-                      <div key={notif.id} className={`p-4 border-b border-gray-50 transition-colors ${!notif.lida ? 'bg-sky-50/40' : 'hover:bg-slate-50'}`}>
-                        <p className="font-bold text-sm text-slate-800 mb-1">{notif.titulo}</p>
-                        <p className="text-xs text-slate-500 mb-2 leading-relaxed">{notif.mensagem}</p>
-                        <p className="text-[10px] text-slate-400 font-medium">
-                          {new Date(notif.criada_em).toLocaleDateString('pt-PT')} às {new Date(notif.criada_em).toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'})}
-                        </p>
+              {showNotifications && (
+                <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                  <div className="p-4 border-b border-gray-50 flex justify-between items-center bg-slate-50">
+                    <h3 className="font-bold text-slate-800 text-sm">Notificações</h3>
+                    {naoLidas > 0 && <span className="text-xs bg-sky-100 text-sky-600 font-bold px-2 py-1 rounded-full">{naoLidas} novas</span>}
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {notificacoes.length === 0 ? (
+                      <div className="p-6 text-center text-slate-500 text-sm">
+                        <Bell size={24} className="mx-auto text-slate-300 mb-2" />
+                        Nenhuma notificação por agora.
                       </div>
-                    ))
-                  )}
+                    ) : (
+                      notificacoes.map(notif => (
+                        <div key={notif.id} className={`p-4 border-b border-gray-50 transition-colors ${!notif.lida ? 'bg-sky-50/40' : 'hover:bg-slate-50'}`}>
+                          <p className="font-bold text-sm text-slate-800 mb-1">{notif.titulo}</p>
+                          <p className="text-xs text-slate-500 mb-2 leading-relaxed">{notif.mensagem}</p>
+                          <p className="text-[10px] text-slate-400 font-medium">
+                            {new Date(notif.criada_em).toLocaleDateString('pt-PT')} às {new Date(notif.criada_em).toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'})}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
+
+            {/* ÍCONE DE PERFIL DIRETO */}
+            <div 
+              onClick={() => setActiveTab('Perfil')}
+              className="w-9 h-9 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold text-sm uppercase shrink-0 cursor-pointer hover:ring-2 hover:ring-sky-200 transition-all shadow-sm"
+              title="Ir para o Perfil"
+            >
+              {user ? nomeExibicao.charAt(0) : <User size={18} />}
+            </div>
+            
           </div>
         </header>
 
