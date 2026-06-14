@@ -9,6 +9,13 @@ import {
 
 const dadosIniciaisPropriedades: any[] = [];
 
+// LISTA DE COMODIDADES DISPONÍVEIS
+const listaComodidades = [
+  "Cozinha Equipada", "Garagem", "Elevador", "Varanda", 
+  "Ar Condicionado", "Aquecimento Central", "Piscina", "Jardim",
+  "Mobilado", "Permite Animais", "Internet Rápida", "Ginásio"
+];
+
 interface PropriedadesProps {
   onMudarParaAnuncios?: () => void;
   onMudarParaMensagens?: () => void; 
@@ -42,7 +49,7 @@ export default function Propriedades({ onMudarParaAnuncios, onMudarParaMensagens
 
   const mostrarErro = (mensagem: string) => {
     setToastErro({ ativo: true, mensagem });
-    setTimeout(() => setToastErro({ ativo: false, mensagem: '' }), 5000); // Fica 5 segundos para ele ler bem
+    setTimeout(() => setToastErro({ ativo: false, mensagem: '' }), 5000); 
   };
 
   // ==============================================================
@@ -92,7 +99,7 @@ export default function Propriedades({ onMudarParaAnuncios, onMudarParaMensagens
                 contratoInicio: prop.contrato_inicio || '-',
                 contratoFim: prop.contrato_fim || '-',
                 perfilInquilino: prop.perfil_inquilino || null,
-                contratoId: prop.contrato_id || null, // Guarda o ID para enviar à API
+                contratoId: prop.contrato_id || null, 
                 
                 imagem: prop.foto_principal || 'https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=1200',
                 galeria: prop.foto_principal ? [prop.foto_principal] : ['https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=1200']
@@ -120,6 +127,14 @@ export default function Propriedades({ onMudarParaAnuncios, onMudarParaMensagens
     
     formData.append('valor_estimado', formData.get('preco') as string);
     formData.delete('preco');
+
+    // APANHAR AS COMODIDADES SELECIONADAS E JUNTÁ-LAS COM VÍRGULAS
+    const comodidadesSelecionadas = formData.getAll('comodidades');
+    if (comodidadesSelecionadas.length > 0) {
+      formData.set('comodidades', comodidadesSelecionadas.join(', '));
+    } else {
+      formData.set('comodidades', ''); // Caso não selecione nada
+    }
 
     const novoEstado = formData.get('estado') as string;
     let novaCor = 'bg-slate-50 text-slate-700';
@@ -154,10 +169,9 @@ export default function Propriedades({ onMudarParaAnuncios, onMudarParaMensagens
           setShowSuccessToast(true);
           setTimeout(() => setShowSuccessToast(false), 3000);
         } else if (response.status === 403) {
-          // AQUI ESTÁ A MAGIA DO LIMITE DO PLANO:
           const errorData = await response.json();
-          mostrarErro(errorData.error); // Podes usar um Toast de erro se tiveres um criado!
-          setIsAddModalOpen(false); // Fecha o modal
+          mostrarErro(errorData.error); 
+          setIsAddModalOpen(false); 
         } else {
           alert("Não foi possível gravar na base de dados.");
         }
@@ -178,6 +192,10 @@ export default function Propriedades({ onMudarParaAnuncios, onMudarParaMensagens
     const novaArea = Number(formData.get('area'));
     const novoPreco = Number(formData.get('preco'));
     const novoEstado = formData.get('estado') as string;
+    
+    // Apanhar as comodidades na edição
+    const comodidadesSelecionadas = formData.getAll('comodidades');
+    const novasComodidades = comodidadesSelecionadas.join(', ');
 
     let novaCor = 'bg-slate-50 text-slate-700';
     if (novoEstado === 'Alugado') novaCor = 'bg-green-50 text-green-700';
@@ -188,7 +206,8 @@ export default function Propriedades({ onMudarParaAnuncios, onMudarParaMensagens
       if (p.id === propriedadeSelecionadaId) {
         return {
           ...p, morada: novaMorada, area: novaArea, preco: novoPreco, estado: novoEstado, cor: novaCor,
-          inquilino: novoEstado === 'Alugado' ? p.inquilino || 'Novo Inquilino' : null
+          inquilino: novoEstado === 'Alugado' ? p.inquilino || 'Novo Inquilino' : null,
+          comodidades: novasComodidades
         };
       }
       return p;
@@ -232,7 +251,6 @@ export default function Propriedades({ onMudarParaAnuncios, onMudarParaMensagens
             if (onMudarParaAnuncios) onMudarParaAnuncios();
           }, 2000);
         } else if (response.status === 403) {
-          // MAGIA: Interceta o limite de anúncios atingido!
           const errorData = await response.json();
           alert(errorData.error);
           setAbrirModalAnuncio(false);
@@ -244,6 +262,7 @@ export default function Propriedades({ onMudarParaAnuncios, onMudarParaMensagens
       }
     }
   };
+
   // ==============================================================
   // 5. APAGAR PROPRIEDADE
   // ==============================================================
@@ -282,7 +301,6 @@ export default function Propriedades({ onMudarParaAnuncios, onMudarParaMensagens
     const prop = propriedades.find(p => p.id === propriedadeSelecionadaId);
     if (!prop) return null;
 
-    // ENCERRAR CONTRATO LOGIC
     const handleEncerrarContrato = async (e: React.FormEvent) => {
       e.preventDefault();
       if (!propriedadeSelecionadaId || !prop.contratoId) return;
@@ -337,7 +355,6 @@ export default function Propriedades({ onMudarParaAnuncios, onMudarParaMensagens
 
     return (
       <div className="animate-in fade-in slide-in-from-right-4 duration-500 pb-10 relative">
-        {/* HEADER DETALHES */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <button 
@@ -367,7 +384,6 @@ export default function Propriedades({ onMudarParaAnuncios, onMudarParaMensagens
           </button>
         </div>
 
-        {/* IMAGEM E BOTÃO GALERIA */}
         <div className="w-full h-72 rounded-3xl overflow-hidden mb-8 relative group shadow-sm border border-slate-200">
           <img src={prop.imagem} alt={`Foto de ${prop.morada}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 via-transparent to-transparent"></div>
@@ -383,7 +399,6 @@ export default function Propriedades({ onMudarParaAnuncios, onMudarParaMensagens
           </button>
         </div>
 
-        {/* CARDS CARACTERÍSTICAS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm space-y-6">
             <h3 className="font-bold text-slate-800 border-b border-slate-100 pb-4">Características</h3>
@@ -447,7 +462,6 @@ export default function Propriedades({ onMudarParaAnuncios, onMudarParaMensagens
                     <p className="font-bold text-slate-800 bg-slate-50 px-4 py-2.5 rounded-xl border border-slate-100">{prop.contratoFim}</p>
                   </div>
                   
-                  {/* NOVO: BOTÃO DE ENCERRAR CONTRATO */}
                   <button 
                     onClick={() => setIsCloseModalOpen(true)}
                     className="w-full mt-4 flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 py-3 rounded-xl font-bold transition-colors border border-red-200"
@@ -472,17 +486,17 @@ export default function Propriedades({ onMudarParaAnuncios, onMudarParaMensagens
           </div>
         </div>
 
-        {/* MODAL 1: EDITAR */}
+        {/* MODAL 1: EDITAR PROPRIEDADE */}
         {isEditModalOpen && (
           <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-            <form onSubmit={handleSaveEdit} className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl">
-              <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+            <form onSubmit={handleSaveEdit} className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
+              <div className="p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
                 <h3 className="font-bold text-lg text-slate-800">Editar Propriedade</h3>
                 <button type="button" onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-full transition-colors">
                   <X size={18} />
                 </button>
               </div>
-              <div className="p-6 space-y-5">
+              <div className="p-6 space-y-5 overflow-y-auto">
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Morada</label>
                   <input type="text" name="morada" required defaultValue={prop.morada} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 focus:border-sky-500 outline-none" />
@@ -505,8 +519,28 @@ export default function Propriedades({ onMudarParaAnuncios, onMudarParaMensagens
                     <option value="Em Obras">Em Obras</option>
                   </select>
                 </div>
+
+                {/* SECÇÃO EDITAR COMODIDADES */}
+                <div className="pt-2">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Comodidades e Extras</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {listaComodidades.map(com => (
+                      <label key={com} className="flex items-center gap-2 p-3 border border-slate-200 rounded-xl cursor-pointer hover:bg-sky-50 hover:border-sky-200 transition-all bg-slate-50">
+                        <input 
+                          type="checkbox" 
+                          name="comodidades" 
+                          value={com} 
+                          defaultChecked={prop.comodidades?.includes(com)}
+                          className="w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-500" 
+                        />
+                        <span className="text-xs font-bold text-slate-700">{com}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
               </div>
-              <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50/50">
+              <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50/50 shrink-0">
                 <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
                 <button type="submit" className="px-6 py-2.5 text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition-colors shadow-md shadow-sky-600/20">Guardar Alterações</button>
               </div>
@@ -777,15 +811,15 @@ export default function Propriedades({ onMudarParaAnuncios, onMudarParaMensagens
       {/* MODAL 5: ADICIONAR NOVA PROPRIEDADE */}
       {isAddModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <form onSubmit={handleAddProperty} encType="multipart/form-data" className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+          <form onSubmit={handleAddProperty} encType="multipart/form-data" className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
               <h3 className="font-bold text-lg text-slate-800">Nova Propriedade</h3>
               <button type="button" onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-full transition-colors">
                 <X size={18} />
               </button>
             </div>
             
-            <div className="p-6 space-y-5">
+            <div className="p-6 space-y-5 overflow-y-auto">
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Fotografia Principal</label>
                 <input type="file" name="foto_principal" accept="image/*" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 focus:border-sky-500 outline-none file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100" />
@@ -825,9 +859,28 @@ export default function Propriedades({ onMudarParaAnuncios, onMudarParaMensagens
                   <input type="number" name="preco" required placeholder="0" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 focus:border-sky-500 outline-none" />
                 </div>
               </div>
+
+              {/* A NOVA SECÇÃO DE COMODIDADES */}
+              <div className="pt-2 border-t border-slate-100">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Comodidades e Extras</label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {listaComodidades.map(com => (
+                    <label key={com} className="flex items-center gap-2 p-3 border border-slate-200 rounded-xl cursor-pointer hover:bg-sky-50 hover:border-sky-200 transition-all bg-slate-50">
+                      <input 
+                        type="checkbox" 
+                        name="comodidades" 
+                        value={com} 
+                        className="w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-500" 
+                      />
+                      <span className="text-xs font-bold text-slate-700">{com}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
             </div>
 
-            <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50/50">
+            <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50/50 shrink-0">
               <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
               <button type="submit" className="px-6 py-2.5 text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition-colors shadow-md shadow-sky-600/20">Criar Propriedade</button>
             </div>
@@ -846,6 +899,7 @@ export default function Propriedades({ onMudarParaAnuncios, onMudarParaMensagens
           <button onClick={() => setShowSuccessToast(false)} className="ml-4 text-emerald-200 hover:text-white"><X size={18} /></button>
         </div>
       )}
+      
       {/* TOAST DE ERRO DE LIMITES DO PLANO */}
       {toastErro.ativo && (
         <div className="fixed bottom-8 right-8 flex items-start gap-4 p-5 w-full max-w-md bg-rose-50 border border-rose-200 rounded-2xl shadow-2xl shadow-rose-900/10 z-[100] animate-in slide-in-from-bottom-8 fade-in duration-300">
