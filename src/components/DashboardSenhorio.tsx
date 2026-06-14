@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Megaphone, Users, Wallet, MessageSquare, Search, Bell, ShieldCheck, AlertCircle, LogOut, User } from 'lucide-react';
+import { 
+  Building2, Megaphone, Users, Wallet, MessageSquare, 
+  Search, Bell, ShieldCheck, AlertCircle, LogOut, User, Clock 
+} from 'lucide-react';
 
 // IMPORTAÇÃO DOS COMPONENTES
 import Anuncios from './Anuncios';
@@ -122,6 +125,33 @@ export default function DashboardSenhorio() {
     sessionStorage.removeItem('refreshToken');
     navigate('/login');
   };
+
+  // ==========================================
+  // ECRÃ DE BLOQUEIO - CONTA EM ANÁLISE
+  // ==========================================
+  if (user && user.role === 'landlord' && user.status_verificacao === 'pendente') {
+    return (
+      <div className="flex h-screen bg-slate-50 items-center justify-center p-4">
+        <div className="bg-white rounded-3xl shadow-xl max-w-md w-full p-8 text-center border border-slate-100">
+          <div className="w-20 h-20 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-6 border-[6px] border-white shadow-sm">
+            <Clock size={36} className="ml-0.5" /> 
+          </div>
+          <h2 className="text-2xl font-bold text-slate-800 mb-3">Conta em Análise</h2>
+          <p className="text-slate-500 mb-8 leading-relaxed">
+            Olá, {nomeExibicao}! Recebemos o teu registo e a tua documentação. 
+            A nossa equipa está a verificar os dados para garantir a segurança da plataforma. 
+            Assim que fores aprovado pelo Administrador, este ecrã desaparecerá automaticamente.
+          </p>
+          <button 
+            onClick={confirmarLogout}
+            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 rounded-xl transition-all"
+          >
+            Sair da Conta
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (activeTab === 'Perfil') {
     return <PerfilSenhorio onBack={() => setActiveTab('Anúncios')} />;
