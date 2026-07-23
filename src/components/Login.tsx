@@ -42,7 +42,7 @@ export default function Login() {
 
     try {
       // 1. Pedir o Token ao Backend
-      const resposta = await fetch('http://127.0.0.1:8000/api/token/', {
+     const resposta = await fetch('https://arrendai-dashboard.onrender.com/api/token/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
@@ -61,7 +61,7 @@ export default function Login() {
         storage.setItem('refreshToken', dados.refresh);
         
         // 2. BUSCAR OS DADOS DO UTILIZADOR
-        const resUser = await fetch('http://127.0.0.1:8000/api/users/me/', {
+        const resUser = await fetch('https://arrendai-dashboard.onrender.com/api/users/me/', {
           headers: { 'Authorization': `Bearer ${dados.access}` }
         });
         
